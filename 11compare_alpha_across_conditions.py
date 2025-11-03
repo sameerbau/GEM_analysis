@@ -531,6 +531,10 @@ def create_comparison_plots(conditions_data, output_dir):
     # Panel 8: Alpha vs D correlation by condition
     ax8 = fig.add_subplot(gs[2, 1])
 
+    # Collect all valid data first to determine reasonable axis limits
+    all_D_valid = []
+    all_alpha_valid = []
+
     for cond, color in zip(conditions_data, colors):
         # Filter valid D values
         valid_idx = np.isfinite(cond['D_original']) & (cond['D_original'] > 0)
@@ -540,6 +544,8 @@ def create_comparison_plots(conditions_data, output_dir):
         if len(D_valid) > 0:
             ax8.scatter(D_valid, alpha_valid, alpha=0.5, s=30,
                        label=cond['condition_name'], color=color)
+            all_D_valid.extend(D_valid)
+            all_alpha_valid.extend(alpha_valid)
 
     ax8.axhline(1.0, color='red', linestyle='--', linewidth=2, alpha=0.5,
                label='Normal diffusion')
@@ -547,6 +553,18 @@ def create_comparison_plots(conditions_data, output_dir):
     ax8.set_ylabel('Alpha Exponent', fontsize=12, fontweight='bold')
     ax8.set_title('Alpha vs D by Condition', fontsize=13, fontweight='bold')
     ax8.set_xscale('log')
+
+    # Set reasonable axis limits to prevent extreme values from causing issues
+    if len(all_alpha_valid) > 0:
+        alpha_min = max(0, np.percentile(all_alpha_valid, 1) - 0.2)
+        alpha_max = min(2.5, np.percentile(all_alpha_valid, 99) + 0.2)
+        ax8.set_ylim(alpha_min, alpha_max)
+
+    if len(all_D_valid) > 0:
+        D_min = max(1e-5, np.percentile(all_D_valid, 1) * 0.5)
+        D_max = min(1e5, np.percentile(all_D_valid, 99) * 2)
+        ax8.set_xlim(D_min, D_max)
+
     ax8.legend(fontsize=9)
     ax8.grid(True, alpha=0.3)
 
@@ -615,8 +633,21 @@ def create_pairwise_comparison_plot(conditions_data, output_dir):
     if n_conditions < 2:
         return
 
+    # Warn if too many conditions for pairwise plot
+    if n_conditions > 8:
+        print(f"  Warning: {n_conditions} conditions creates a {n_conditions}x{n_conditions} matrix.")
+        print(f"  Skipping pairwise comparison plot (recommended max: 8 conditions)")
+        print(f"  See pairwise comparison CSV for detailed statistics.")
+        return
+
     # Create comparison matrix
-    fig, axes = plt.subplots(n_conditions, n_conditions, figsize=(4*n_conditions, 4*n_conditions))
+    # Cap figure size to prevent matplotlib errors with large numbers of conditions
+    # At 300 dpi, we need to keep total pixels < 65536 in each dimension
+    # Maximum safe size is ~200 inches, so cap at 30 inches per side
+    subplot_size = min(4, 30 / n_conditions)
+    fig_size = subplot_size * n_conditions
+
+    fig, axes = plt.subplots(n_conditions, n_conditions, figsize=(fig_size, fig_size))
 
     if n_conditions == 1:
         axes = np.array([[axes]])
@@ -866,7 +897,7 @@ def main():
     print("\nCreating comparison plots...")
     create_comparison_plots(conditions_data, output_dir)
 
-    if len(conditions_data) >= 2 and len(conditions_data) <= 5:
+    if len(conditions_data) >= 2:
         create_pairwise_comparison_plot(conditions_data, output_dir)
 
     print(f"\n{'='*70}")

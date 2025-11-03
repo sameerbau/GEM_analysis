@@ -859,14 +859,18 @@ def create_alpha_vs_diffusion_plot(results, output_dir):
 
     # Shaded regions for diffusion types
     ax1.axhspan(0.9, 1.1, alpha=0.15, color='green', zorder=0)
-    ax1.text(ax1.get_xlim()[0] * 1.1, 1.0, 'Normal', fontsize=10,
-            verticalalignment='center', color='darkgreen', fontweight='bold')
 
     ax1.set_xlabel('Diffusion Coefficient D (μm²/s)', fontsize=13, fontweight='bold')
     ax1.set_ylabel('Alpha Exponent', fontsize=13, fontweight='bold')
     ax1.set_title(f'Alpha vs Diffusion Coefficient\n{base_name}',
                  fontsize=14, fontweight='bold')
     ax1.set_xscale('log')
+
+    # Set reasonable y-axis limits to prevent extreme values from causing issues
+    y_min = max(0, min(alpha_vals) - 0.2)
+    y_max = min(2.5, max(alpha_vals) + 0.2)
+    ax1.set_ylim(y_min, y_max)
+
     ax1.grid(True, alpha=0.3, which='both')
     ax1.legend(fontsize=11, loc='best')
 
@@ -896,22 +900,35 @@ def create_alpha_vs_diffusion_plot(results, output_dir):
         alpha_min = max(np.percentile(alpha_vals_clean, 1), 0)
         alpha_max = min(np.percentile(alpha_vals_clean, 99), 2.5)
 
-        try:
-            hexbin = ax2.hexbin(D_log_clean, alpha_vals_clean, gridsize=25, cmap='viridis',
-                               mincnt=1, edgecolors='black', linewidths=0.2,
-                               extent=[D_log_min, D_log_max, alpha_min, alpha_max])
-            ax2.axhline(1.0, color='white', linestyle='--', linewidth=2.5,
-                       label='Normal diffusion (α=1)')
-
-            # Add colorbar
-            cbar = plt.colorbar(hexbin, ax=ax2)
-            cbar.set_label('Count', fontsize=11)
-        except Exception as e:
-            print(f"Warning: Could not create hexbin plot: {e}")
-            # Fall back to scatter plot
+        # Additional safety check: ensure extent is reasonable
+        if D_log_max - D_log_min > 15 or alpha_max - alpha_min > 10:
+            print(f"Warning: Data range too large for hexbin, using scatter plot instead")
+            # Use scatter plot for extreme ranges
             ax2.scatter(D_log_clean, alpha_vals_clean, alpha=0.5, s=30, c='steelblue')
             ax2.axhline(1.0, color='red', linestyle='--', linewidth=2.5,
                        label='Normal diffusion (α=1)')
+            # Set reasonable axis limits
+            ax2.set_xlim(D_log_min, D_log_max)
+            ax2.set_ylim(alpha_min, alpha_max)
+        else:
+            try:
+                hexbin = ax2.hexbin(D_log_clean, alpha_vals_clean, gridsize=25, cmap='viridis',
+                                   mincnt=1, edgecolors='black', linewidths=0.2,
+                                   extent=[D_log_min, D_log_max, alpha_min, alpha_max])
+                ax2.axhline(1.0, color='white', linestyle='--', linewidth=2.5,
+                           label='Normal diffusion (α=1)')
+
+                # Add colorbar
+                cbar = plt.colorbar(hexbin, ax=ax2)
+                cbar.set_label('Count', fontsize=11)
+            except Exception as e:
+                print(f"Warning: Could not create hexbin plot: {e}")
+                # Fall back to scatter plot
+                ax2.scatter(D_log_clean, alpha_vals_clean, alpha=0.5, s=30, c='steelblue')
+                ax2.axhline(1.0, color='red', linestyle='--', linewidth=2.5,
+                           label='Normal diffusion (α=1)')
+                ax2.set_xlim(D_log_min, D_log_max)
+                ax2.set_ylim(alpha_min, alpha_max)
     else:
         ax2.text(0.5, 0.5, 'Insufficient valid data', transform=ax2.transAxes,
                 ha='center', va='center', fontsize=14)
