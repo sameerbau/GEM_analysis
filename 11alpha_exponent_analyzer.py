@@ -753,7 +753,7 @@ def create_diagnostic_plots(results, output_dir, n_examples=6):
         ax6.legend(fontsize=9)
         ax6.grid(True, alpha=0.3)
 
-    # Panel 7-8: Example MSD fits (log-log plots)
+    # Panel 7-12: Example MSD fits (log-log plots)
     # Select diverse examples
     trajectories_sorted = sorted(results['trajectories'], key=lambda x: x['alpha'])
     n_traj = len(trajectories_sorted)
@@ -763,32 +763,36 @@ def create_diagnostic_plots(results, output_dir, n_examples=6):
         indices = np.linspace(0, n_traj-1, min(n_examples, n_traj), dtype=int)
         examples = [trajectories_sorted[i] for i in indices]
 
-        # Plot examples in a 2x3 grid (panels 7-12)
+        # Define grid positions for 6 example plots
+        # Row 1: cols 2-3, Row 2: cols 0-3
+        example_positions = [
+            (1, 2), (1, 3),  # Row 1, last 2 columns
+            (2, 0), (2, 1), (2, 2), (2, 3)  # Row 2, all 4 columns
+        ]
+
+        # Plot examples
         for idx, traj in enumerate(examples[:6]):
-            row = 1 + idx // 3
-            col = 2 + idx % 3
+            row, col = example_positions[idx]
+            ax = fig.add_subplot(gs[row, col])
 
-            if row < 3:  # Only plot in available space
-                ax = fig.add_subplot(gs[row, col])
+            # Log-log plot
+            ax.plot(traj['log_t'], traj['log_msd'], 'o', markersize=6,
+                   alpha=0.7, label='Data', color='steelblue')
+            ax.plot(traj['log_t'], traj['fit_log_msd'], '-', linewidth=2,
+                   color='red', label=f'Fit: α={traj["alpha"]:.2f}')
 
-                # Log-log plot
-                ax.plot(traj['log_t'], traj['log_msd'], 'o', markersize=6,
-                       alpha=0.7, label='Data', color='steelblue')
-                ax.plot(traj['log_t'], traj['fit_log_msd'], '-', linewidth=2,
-                       color='red', label=f'Fit: α={traj["alpha"]:.2f}')
+            ax.set_xlabel('log₁₀(time lag)', fontsize=9)
+            ax.set_ylabel('log₁₀(MSD)', fontsize=9)
+            ax.set_title(f'Traj {traj["id"]} | {traj["diffusion_type"]}',
+                       fontsize=10, fontweight='bold')
+            ax.legend(fontsize=8)
+            ax.grid(True, alpha=0.3)
 
-                ax.set_xlabel('log₁₀(time lag)', fontsize=9)
-                ax.set_ylabel('log₁₀(MSD)', fontsize=9)
-                ax.set_title(f'Traj {traj["id"]} | {traj["diffusion_type"]}',
-                           fontsize=10, fontweight='bold')
-                ax.legend(fontsize=8)
-                ax.grid(True, alpha=0.3)
-
-                # Add text box with fit info
-                textstr = f'R²={traj["alpha_r_squared"]:.3f}\nn={traj["n_time_lags"]}'
-                ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
-                       verticalalignment='top', bbox=dict(boxstyle='round',
-                       facecolor='wheat', alpha=0.5))
+            # Add text box with fit info
+            textstr = f'R²={traj["alpha_r_squared"]:.3f}\nn={traj["n_time_lags"]}'
+            ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
+                   verticalalignment='top', bbox=dict(boxstyle='round',
+                   facecolor='wheat', alpha=0.5))
 
     # Add overall title
     fig.suptitle(f'Alpha Exponent Analysis: {base_name}', fontsize=16, fontweight='bold')
