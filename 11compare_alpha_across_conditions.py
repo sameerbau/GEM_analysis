@@ -806,67 +806,41 @@ def main():
 
     # Get user input
     print("\nThis script compares alpha values across multiple conditions.")
-    print("Each condition can have multiple replicate files.")
-    print("\nYou can organize files by:")
-    print("  1. Manual grouping (enter file paths for each condition)")
-    print("  2. Pattern matching (e.g., control_*.pkl, treatment_*.pkl)")
+    print("\nREQUIRED INPUT: alpha_analyzed_*.pkl files")
+    print("  (Output from 11alpha_exponent_analyzer.py)")
+    print("\nWorkflow:")
+    print("  1. Run 11alpha_exponent_analyzer.py on each condition folder")
+    print("     → produces alpha_analyzed_*.pkl files")
+    print("  2. Run this script to compare conditions")
+    print("="*70)
 
-    mode = input("\nChoose mode (1=Manual, 2=Pattern): ").strip()
+    # Simplified input mode
+    n_conditions = int(input("\nNumber of conditions to compare: "))
 
     conditions_data = []
 
-    if mode == "1":
-        # Manual grouping
-        n_conditions = int(input("How many conditions to compare? "))
+    for i in range(n_conditions):
+        print(f"\n--- Condition {i+1} ---")
+        condition_name = input(f"Enter name for condition {i+1}: ").strip()
 
-        for i in range(n_conditions):
-            print(f"\n--- Condition {i+1} ---")
-            condition_name = input(f"Enter name for condition {i+1}: ").strip()
+        condition_folder = input(f"Enter folder containing alpha_analyzed_*.pkl files for condition {i+1}: ").strip()
 
-            file_list_input = input(f"Enter file paths (comma-separated or directory): ").strip()
+        # Check if it's a directory
+        if not os.path.isdir(condition_folder):
+            print(f"  ERROR: '{condition_folder}' is not a valid directory!")
+            continue
 
-            # Check if it's a directory
-            if os.path.isdir(file_list_input):
-                file_paths = glob.glob(os.path.join(file_list_input, "alpha_analyzed_*.pkl"))
-            else:
-                # Parse comma-separated list
-                file_paths = [f.strip() for f in file_list_input.split(',')]
+        # Find alpha_analyzed_*.pkl files in this folder
+        file_paths = glob.glob(os.path.join(condition_folder, "alpha_analyzed_*.pkl"))
 
-            if file_paths:
-                cond_data = load_condition_data(file_paths, condition_name)
-                if cond_data is not None:
-                    conditions_data.append(cond_data)
-
-    else:
-        # Pattern matching
-        base_dir = input("\nEnter base directory containing all files: ").strip()
-
-        if not os.path.isdir(base_dir):
-            print(f"Error: {base_dir} is not a valid directory")
-            return
-
-        print("\nExample patterns:")
-        print("  control_*.pkl")
-        print("  treatment1_*.pkl")
-        print("  *_condition1_*.pkl")
-
-        n_conditions = int(input("\nHow many conditions? "))
-
-        for i in range(n_conditions):
-            print(f"\n--- Condition {i+1} ---")
-            condition_name = input(f"Enter name for condition {i+1}: ").strip()
-            pattern = input(f"Enter file pattern (e.g., control_*.pkl): ").strip()
-
-            # Find matching files
-            search_pattern = os.path.join(base_dir, pattern)
-            file_paths = glob.glob(search_pattern)
-
-            if not file_paths:
-                print(f"  WARNING: No files found matching pattern: {pattern}")
-            else:
-                cond_data = load_condition_data(file_paths, condition_name)
-                if cond_data is not None:
-                    conditions_data.append(cond_data)
+        if not file_paths:
+            print(f"  WARNING: No alpha_analyzed_*.pkl files found in {condition_folder}")
+            print(f"  Make sure you've run 11alpha_exponent_analyzer.py first!")
+        else:
+            print(f"  Found {len(file_paths)} file(s)")
+            cond_data = load_condition_data(file_paths, condition_name)
+            if cond_data is not None:
+                conditions_data.append(cond_data)
 
     # Check if we have enough data
     if len(conditions_data) < 2:
