@@ -881,13 +881,40 @@ def create_alpha_vs_diffusion_plot(results, output_dir):
     ax1.legend(handles=legend_elements, loc='upper right', fontsize=10, title='Diffusion Type')
 
     # Plot 2: Hexbin density plot
-    # Filter for reasonable ranges
+    # Filter for reasonable ranges and handle edge cases
     D_log = np.log10(D_vals)
 
-    hexbin = ax2.hexbin(D_log, alpha_vals, gridsize=25, cmap='viridis',
-                       mincnt=1, edgecolors='black', linewidths=0.2)
-    ax2.axhline(1.0, color='white', linestyle='--', linewidth=2.5,
-               label='Normal diffusion (α=1)')
+    # Remove any NaN or inf values
+    valid_idx = np.isfinite(D_log) & np.isfinite(alpha_vals)
+    D_log_clean = np.array(D_log)[valid_idx]
+    alpha_vals_clean = np.array(alpha_vals)[valid_idx]
+
+    if len(D_log_clean) > 0:
+        # Set reasonable axis limits to prevent huge image sizes
+        D_log_min = max(np.percentile(D_log_clean, 1), -5)  # Cap at -5 (10^-5)
+        D_log_max = min(np.percentile(D_log_clean, 99), 5)  # Cap at 5 (10^5)
+        alpha_min = max(np.percentile(alpha_vals_clean, 1), 0)
+        alpha_max = min(np.percentile(alpha_vals_clean, 99), 2.5)
+
+        try:
+            hexbin = ax2.hexbin(D_log_clean, alpha_vals_clean, gridsize=25, cmap='viridis',
+                               mincnt=1, edgecolors='black', linewidths=0.2,
+                               extent=[D_log_min, D_log_max, alpha_min, alpha_max])
+            ax2.axhline(1.0, color='white', linestyle='--', linewidth=2.5,
+                       label='Normal diffusion (α=1)')
+
+            # Add colorbar
+            cbar = plt.colorbar(hexbin, ax=ax2)
+            cbar.set_label('Count', fontsize=11)
+        except Exception as e:
+            print(f"Warning: Could not create hexbin plot: {e}")
+            # Fall back to scatter plot
+            ax2.scatter(D_log_clean, alpha_vals_clean, alpha=0.5, s=30, c='steelblue')
+            ax2.axhline(1.0, color='red', linestyle='--', linewidth=2.5,
+                       label='Normal diffusion (α=1)')
+    else:
+        ax2.text(0.5, 0.5, 'Insufficient valid data', transform=ax2.transAxes,
+                ha='center', va='center', fontsize=14)
 
     ax2.set_xlabel('log₁₀(Diffusion Coefficient) (μm²/s)', fontsize=13, fontweight='bold')
     ax2.set_ylabel('Alpha Exponent', fontsize=13, fontweight='bold')
@@ -895,10 +922,6 @@ def create_alpha_vs_diffusion_plot(results, output_dir):
                  fontsize=14, fontweight='bold')
     ax2.grid(True, alpha=0.3)
     ax2.legend(fontsize=11)
-
-    # Add colorbar
-    cbar = plt.colorbar(hexbin, ax=ax2)
-    cbar.set_label('Count', fontsize=11)
 
     plt.tight_layout()
 
