@@ -1,0 +1,54 @@
+TWO-POINT MICRORHEOLOGY (TPM) CODE EXPLANATION
+==================================================
+
+WHAT TPM DOES:
+---------------
+TPM analyzes how pairs of particles move together to extract
+properties of the material they're embedded in (like cytoplasm).
+
+KEY PHYSICS CONCEPTS:
+--------------------
+1. PARTICLE PAIRS: Instead of looking at single particles,
+   TPM looks at how particle pairs move relative to each other.
+
+2. CORRELATIONS: If particles move independently → fluid
+   If particles move together → more solid-like material
+
+3. DISTANCE DEPENDENCE: How correlation changes with distance
+   tells you about material properties:
+   • 1/r scaling → viscous fluid
+   • 1/r² scaling → elastic solid
+   • In between → viscoelastic material
+
+MAIN CODE FUNCTIONS:
+-------------------
+1. load_processed_data(): Loads trajectory files
+2. prepare_trajectories_for_tpm(): Organizes data by frame
+3. track_particle_pairs(): Finds pairs and calculates correlations
+4. bin_correlation_by_distance(): Groups results by distance
+5. calculate_viscoelastic_modulus(): Extracts material stiffness
+
+HOW TO INTERPRET RESULTS:
+-------------------------
+1. CORRELATION vs DISTANCE plot:
+   • Steeper slope = more solid-like material
+   • Shallower slope = more fluid-like material
+
+2. VISCOELASTIC MODULUS:
+   • Higher values = stiffer material
+   • Compare to known materials:
+     - Water: ~0.001 Pa
+     - Cytoplasm: ~1-100 Pa
+     - Gels: ~100-1000 Pa
+
+3. DATA QUALITY:
+   • Need many particle pairs for good statistics
+   • Smooth curves indicate reliable results
+   • Noisy data suggests insufficient statistics
+
+COMMON ISSUES:
+-------------
+• Not enough particles → poor statistics
+• Particles too close → measurement artifacts
+• Particles too far → weak correlations
+• Short trajectories → limited time information

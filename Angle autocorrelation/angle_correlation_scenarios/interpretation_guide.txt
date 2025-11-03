@@ -1,0 +1,43 @@
+
+ANGLE AUTOCORRELATION INTERPRETATION GUIDE
+==========================================
+
+1. PURE BROWNIAN MOTION
+   - Rapid exponential decay to zero
+   - Crossing time: ~0.1-0.5 seconds
+   - No oscillations
+   - Interpretation: Completely random motion, no directional memory
+
+2. PERSISTENT MOTION  
+   - Slower decay, higher crossing time
+   - Crossing time: 1-5 seconds
+   - Smooth decay curve
+   - Interpretation: Particles maintain direction (active motion, swimming)
+
+3. CONFINED MOTION
+   - May show oscillations around zero
+   - Complex crossing pattern
+   - Interpretation: Particles bounce off boundaries, creating correlations
+
+4. OSCILLATORY MOTION
+   - Clear oscillations in correlation function
+   - Multiple zero crossings
+   - Interpretation: Periodic or quasi-periodic motion
+
+5. CORRELATED MOTION (Ornstein-Uhlenbeck)
+   - Exponential decay with specific time constant
+   - Single crossing time
+   - Interpretation: Velocity correlations, viscoelastic medium
+
+EXPERIMENTAL DATA INTERPRETATION:
+- Fast decay (< 0.1s): Thermal motion dominates
+- Slow decay (> 1s): Active or guided motion
+- Oscillations: Confinement or external forces
+- No crossing: Highly persistent or ballistic motion
+- Multiple crossings: Complex environment or multiple populations
+
+NOISE CHARACTERIZATION METHODS:
+- Compare experimental crossing times with theoretical values
+- Fit exponential decay: C(τ) = exp(-τ/τ_p) where τ_p is persistence time
+- Use complementary techniques: MSD analysis, velocity autocorrelation
+- Apply Kramers-Kronig analysis for frequency domain insights
