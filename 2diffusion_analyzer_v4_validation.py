@@ -392,6 +392,222 @@ def create_quality_report(analyzed_data, output_path, filename):
         print("  No quality issues detected - all measurements PASS!")
         return None
 
+def create_diagnostic_plots(analyzed_data, output_path, filename):
+    """
+    Create comprehensive diagnostic plots with quality indicators.
+
+    Args:
+        analyzed_data: Dictionary containing analyzed trajectory data
+        output_path: Directory to save plots
+        filename: Base filename for plots
+    """
+    if not analyzed_data['trajectories']:
+        print("No trajectories to plot")
+        return
+
+    # Figure 1: Quality-coded scatter plots and distributions
+    fig, axs = plt.subplots(2, 3, figsize=(18, 12))
+
+    # Create quality color map
+    quality_colors = {'PASS': 'green', 'WARNING': 'orange', 'FAIL': 'red'}
+
+    # Extract data with quality flags
+    plot_data = []
+    for traj in analyzed_data['trajectories']:
+        if not np.isnan(traj['D']):
+            plot_data.append({
+                'D': traj['D'],
+                'D_CI_low': traj['D_CI_low'],
+                'D_CI_high': traj['D_CI_high'],
+                'sigma_loc': traj['sigma_loc'] * 1000,  # nm
+                'r_squared': traj['r_squared'],
+                'track_length': traj['track_length'],
+                'n_fit_points': traj['n_fit_points'],
+                'quality': traj['validation']['quality'],
+                'color': quality_colors[traj['validation']['quality']]
+            })
+
+    if not plot_data:
+        print("No valid data to plot")
+        return
+
+    # Plot 1: D with error bars, color-coded by quality
+    ax = axs[0, 0]
+    n_show = min(30, len(plot_data))
+    for i in range(n_show):
+        d = plot_data[i]
+        err_low = d['D'] - d['D_CI_low']
+        err_high = d['D_CI_high'] - d['D']
+        ax.errorbar(i, d['D'], yerr=[[err_low], [err_high]],
+                    fmt='o', color=d['color'], capsize=3, alpha=0.7)
+
+    ax.set_xlabel('Trajectory index')
+    ax.set_ylabel('Diffusion coefficient (µm²/s)')
+    ax.set_title(f'D with 95% CI (first {n_show} trajectories)\nColor: Green=PASS, Orange=WARNING, Red=FAIL')
+    ax.grid(True, alpha=0.3)
+
+    # Plot 2: D histogram with quality overlay
+    ax = axs[0, 1]
+    D_pass = [d['D'] for d in plot_data if d['quality'] == 'PASS']
+    D_warning = [d['D'] for d in plot_data if d['quality'] == 'WARNING']
+    D_fail = [d['D'] for d in plot_data if d['quality'] == 'FAIL']
+
+    bins = np.linspace(0, np.percentile([d['D'] for d in plot_data], 99), 30)
+    ax.hist(D_pass, bins=bins, alpha=0.7, color='green', label=f'PASS ({len(D_pass)})')
+    ax.hist(D_warning, bins=bins, alpha=0.7, color='orange', label=f'WARNING ({len(D_warning)})')
+    ax.hist(D_fail, bins=bins, alpha=0.7, color='red', label=f'FAIL ({len(D_fail)})')
+
+    if D_pass:
+        ax.axvline(np.median(D_pass), color='green', linestyle='--', linewidth=2,
+                   label=f'Median PASS: {np.median(D_pass):.4f}')
+
+    ax.set_xlabel('Diffusion coefficient (µm²/s)')
+    ax.set_ylabel('Count')
+    ax.set_title('D Distribution by Quality')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # Plot 3: Localization error distribution
+    ax = axs[0, 2]
+    sigma_pass = [d['sigma_loc'] for d in plot_data if d['quality'] == 'PASS']
+    sigma_warning = [d['sigma_loc'] for d in plot_data if d['quality'] == 'WARNING']
+    sigma_fail = [d['sigma_loc'] for d in plot_data if d['quality'] == 'FAIL']
+
+    all_sigma = sigma_pass + sigma_warning + sigma_fail
+    if all_sigma:
+        bins = np.linspace(0, np.percentile(all_sigma, 99), 30)
+        ax.hist(sigma_pass, bins=bins, alpha=0.7, color='green', label='PASS')
+        ax.hist(sigma_warning, bins=bins, alpha=0.7, color='orange', label='WARNING')
+        ax.hist(sigma_fail, bins=bins, alpha=0.7, color='red', label='FAIL')
+
+        if sigma_pass:
+            ax.axvline(np.median(sigma_pass), color='green', linestyle='--', linewidth=2,
+                       label=f'Median: {np.median(sigma_pass):.1f} nm')
+
+    ax.set_xlabel('Localization error σ_loc (nm)')
+    ax.set_ylabel('Count')
+    ax.set_title('σ_loc Distribution by Quality')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # Plot 4: R² vs D, color-coded
+    ax = axs[1, 0]
+    for d in plot_data:
+        ax.scatter(d['D'], d['r_squared'], color=d['color'], alpha=0.6, s=50)
+
+    ax.axhline(R_SQUARED_MIN, color='red', linestyle='--', label=f'Min R² = {R_SQUARED_MIN}')
+    ax.set_xlabel('Diffusion coefficient (µm²/s)')
+    ax.set_ylabel('R² (fit quality)')
+    ax.set_title('Fit Quality vs D')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # Plot 5: Track length vs fit points
+    ax = axs[1, 1]
+    for d in plot_data:
+        ax.scatter(d['track_length'], d['n_fit_points'], color=d['color'], alpha=0.6, s=50)
+
+    # Add theoretical line
+    x_theory = np.array([0, max([d['track_length'] for d in plot_data])])
+    y_theory = x_theory * TAU_FRACTION
+    ax.plot(x_theory, y_theory, 'k--', linewidth=2, label=f'Theory: {TAU_FRACTION}×N')
+
+    ax.set_xlabel('Track length (frames)')
+    ax.set_ylabel('Number of fit points')
+    ax.set_title('Tau Filtering Effect')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # Plot 6: Quality pie chart
+    ax = axs[1, 2]
+    quality_counts = {
+        'PASS': len([d for d in plot_data if d['quality'] == 'PASS']),
+        'WARNING': len([d for d in plot_data if d['quality'] == 'WARNING']),
+        'FAIL': len([d for d in plot_data if d['quality'] == 'FAIL'])
+    }
+
+    colors_pie = ['green', 'orange', 'red']
+    labels_pie = [f"{k}\n({v})" for k, v in quality_counts.items() if v > 0]
+    sizes = [v for v in quality_counts.values() if v > 0]
+    colors_used = [c for c, v in zip(colors_pie, quality_counts.values()) if v > 0]
+
+    ax.pie(sizes, labels=labels_pie, colors=colors_used, autopct='%1.1f%%', startangle=90)
+    ax.set_title('Overall Quality Assessment')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_path, f"{filename}_validation_summary.png"), dpi=300)
+    plt.close()
+
+    # Figure 2: Selected MSD fits (best, warning, and fail examples)
+    # Select representative trajectories
+    trajs = analyzed_data['trajectories']
+
+    pass_trajs = [t for t in trajs if t['validation']['quality'] == 'PASS' and not np.isnan(t['D'])]
+    warn_trajs = [t for t in trajs if t['validation']['quality'] == 'WARNING' and not np.isnan(t['D'])]
+    fail_trajs = [t for t in trajs if t['validation']['quality'] == 'FAIL' and not np.isnan(t['D'])]
+
+    selected = []
+    if pass_trajs:
+        # Select best PASS (highest R²)
+        selected.append(max(pass_trajs, key=lambda t: t['r_squared']))
+    if warn_trajs:
+        selected.append(warn_trajs[0])
+    if fail_trajs:
+        selected.append(fail_trajs[0])
+
+    if selected:
+        fig, axs = plt.subplots(len(selected), 1, figsize=(12, 5*len(selected)))
+        if len(selected) == 1:
+            axs = [axs]
+
+        for i, traj in enumerate(selected):
+            ax = axs[i]
+
+            # Plot MSD data
+            ax.plot(traj['time_data'], traj['msd_data'], 'o', alpha=0.5, label='MSD data')
+
+            # Plot fit
+            if not np.isnan(traj['D']):
+                t_extended = np.linspace(0, traj['time_data'][-1], 100)
+                msd_fit = linear_msd(t_extended, traj['D'], traj['offset'])
+
+                color = quality_colors[traj['validation']['quality']]
+                ax.plot(t_extended, msd_fit, '-', color=color, linewidth=2,
+                       label=f'Fit: D = {traj["D"]:.4f} µm²/s')
+
+                # Highlight fitted region
+                ax.plot(traj['t_fit'], traj['msd_fit'], 'o', color='red',
+                       markersize=8, label='Fitted points')
+
+                # Confidence bands
+                if not np.isnan(traj['D_CI_low']):
+                    msd_low = linear_msd(t_extended, traj['D_CI_low'], traj['offset'])
+                    msd_high = linear_msd(t_extended, traj['D_CI_high'], traj['offset'])
+                    ax.fill_between(t_extended, msd_low, msd_high, alpha=0.2, color=color)
+
+            # Title with quality info
+            quality_str = traj['validation']['quality']
+            flags_str = '\n'.join(traj['validation']['flags'][:2]) if traj['validation']['flags'] else 'No issues'
+
+            ax.set_title(f"Trajectory {int(traj['id'])} - Quality: {quality_str}\n"
+                        f"D={traj['D']:.4f} µm²/s, σ_loc={traj['sigma_loc']*1000:.1f} nm, "
+                        f"R²={traj['r_squared']:.3f}\n{flags_str}",
+                        color=quality_colors[quality_str], fontweight='bold')
+            ax.set_xlabel('Time lag (s)')
+            ax.set_ylabel('MSD (µm²)')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_path, f"{filename}_example_fits.png"), dpi=300)
+        plt.close()
+
+    print(f"  Diagnostic plots saved")
+
+def linear_msd(t, D, offset):
+    """Linear MSD model for plotting."""
+    return 4 * D * t + offset
+
 def main():
     """Main function with validation."""
     print("="*60)
@@ -439,6 +655,9 @@ def main():
 
         # Generate quality report
         quality_df = create_quality_report(analyzed_data, output_dir, base_name)
+
+        # Create diagnostic plots
+        create_diagnostic_plots(analyzed_data, output_dir, base_name)
 
         # Print summary
         if analyzed_data['diffusion_coefficients']:
