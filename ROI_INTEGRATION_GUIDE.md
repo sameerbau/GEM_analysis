@@ -4,6 +4,12 @@
 
 This guide explains how to integrate ROI-based classification results with the main diffusion analysis pipeline, allowing you to reuse all existing analysis tools for inside/outside ROI comparisons.
 
+**Available Integration Tools:**
+- **Single Condition** (`roi_to_pipeline_integration.py`) - This guide - Process one condition at a time
+- **Batch Processing** (`roi_to_pipeline_batch.py`) - See [ROI_BATCH_INTEGRATION_GUIDE.md](ROI_BATCH_INTEGRATION_GUIDE.md) - Process multiple conditions with multi-ROI support
+
+Choose batch processing if you have multiple conditions or need multi-ROI analysis.
+
 ## Integration Workflow
 
 ```
