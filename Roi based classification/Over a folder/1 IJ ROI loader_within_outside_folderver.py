@@ -37,8 +37,9 @@ MAX_ROIS_TO_DISPLAY = 20
 
 # Pixel-to-micrometer conversion factor
 # This is the key parameter for coordinate transformation
-# Default value: 0.09 µm/pixel (means 1 pixel = 0.09 µm, or 1 µm = 11.11 pixels)
-PIXEL_TO_MICRON = 0.09  # µm/pixel
+# IMPORTANT: Must match CONVERSION parameter in main pipeline (0.094 µm/pixel)
+# Updated value: 0.094 µm/pixel (means 1 pixel = 0.094 µm, or 1 µm = 10.64 pixels)
+PIXEL_TO_MICRON = 0.094  # µm/pixel
 
 # Offset parameters (typically should be close to 0 if both coordinate systems have the same origin)
 X_OFFSET = 0.0
