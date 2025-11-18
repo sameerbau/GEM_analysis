@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files (optional - uncomment if needed)
+# *.pkl
+# *.csv
+
+# Temporary files
+*.tmp
+*.log
+*~
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Output directories (optional - uncomment if needed)
+# processed_trajectories/
+# pipeline_integrated/
+# pipeline_batch_integrated/
+# roi_diffusion_*/
