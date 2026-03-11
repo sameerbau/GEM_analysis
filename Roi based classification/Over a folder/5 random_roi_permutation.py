@@ -621,6 +621,7 @@ def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng):
 # Main
 # ─────────────────────────────────────────────────────────────
 def main():
+    global N_PERMUTATIONS
     print("Random ROI Permutation Test")
     print("============================\n")
 
@@ -629,7 +630,6 @@ def main():
         print(f"Folder not found: {folder}"); sys.exit(1)
 
     n_perm_input = input(f"Number of random permutations [{N_PERMUTATIONS}]: ").strip()
-    global N_PERMUTATIONS
     if n_perm_input:
         try:
             N_PERMUTATIONS = int(n_perm_input)
