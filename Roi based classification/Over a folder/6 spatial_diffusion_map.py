@@ -499,7 +499,8 @@ def plot_morans_summary(all_morans, output_path):
 # ─────────────────────────────────────────────────────────────
 # Per-sample pipeline
 # ─────────────────────────────────────────────────────────────
-def process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder):
+def process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder,
+                   summary_only=False):
     print(f"\n{'='*60}")
     print(f"  {sample_id}")
     print(f"{'='*60}")
@@ -523,55 +524,59 @@ def process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder):
         print(f"  Only {len(trajs)} trajectories with valid D — skipping."); return None, None
     print(f"  {len(trajs)} trajectories with valid D")
 
-    # Optional: membrane image
-    image = None
-    if mem_tif is not None:
-        try:
-            image = load_membrane_image(mem_tif)
-            print(f"  Loaded membrane image: {image.shape}")
-        except Exception as e:
-            print(f"  Could not load membrane image: {e}")
+    if not summary_only:
+        # Optional: membrane image
+        image = None
+        if mem_tif is not None:
+            try:
+                image = load_membrane_image(mem_tif)
+                print(f"  Loaded membrane image: {image.shape}")
+            except Exception as e:
+                print(f"  Could not load membrane image: {e}")
 
-    # Optional: ROI polygons (for overlay)
-    rois_um = {}
-    if roi_zip is not None:
-        try:
-            rois_um = load_roi_polygons_um(roi_zip, px_to_um)
-            print(f"  Loaded {len(rois_um)} ROI(s) for overlay")
-        except Exception as e:
-            print(f"  Could not load ROIs: {e}")
+        # Optional: ROI polygons (for overlay)
+        rois_um = {}
+        if roi_zip is not None:
+            try:
+                rois_um = load_roi_polygons_um(roi_zip, px_to_um)
+                print(f"  Loaded {len(rois_um)} ROI(s) for overlay")
+            except Exception as e:
+                print(f"  Could not load ROIs: {e}")
 
-    # ── Build spatial D map ──────────────────────────────────
-    print(f"  Building spatial D map (σ={KERNEL_BANDWIDTH_UM} µm, "
-          f"grid={GRID_SPACING_UM} µm)...")
-    grid_x, grid_y, D_map, weight_map, n_eff_map = build_spatial_grid(
-        trajs, KERNEL_BANDWIDTH_UM, GRID_SPACING_UM
-    )
-    if D_map is None:
-        print("  Failed to build grid — skipping."); return None, None
+        # ── Build spatial D map ──────────────────────────────────
+        print(f"  Building spatial D map (σ={KERNEL_BANDWIDTH_UM} µm, "
+              f"grid={GRID_SPACING_UM} µm)...")
+        grid_x, grid_y, D_map, weight_map, n_eff_map = build_spatial_grid(
+            trajs, KERNEL_BANDWIDTH_UM, GRID_SPACING_UM
+        )
+        if D_map is None:
+            print("  Failed to build grid — skipping."); return None, None
 
-    n_valid = int(np.sum(~np.isnan(D_map)))
-    print(f"  Grid: {D_map.shape[1]}×{D_map.shape[0]}, "
-          f"{n_valid} valid grid points")
+        n_valid = int(np.sum(~np.isnan(D_map)))
+        print(f"  Grid: {D_map.shape[1]}×{D_map.shape[0]}, "
+              f"{n_valid} valid grid points")
 
-    # ── Scatter plot ─────────────────────────────────────────
-    plot_scatter_by_D(trajs, rois_um, sample_id,
-                      os.path.join(output_dir, 'trajectory_positions.png'))
+        # ── Scatter plot ─────────────────────────────────────────
+        plot_scatter_by_D(trajs, rois_um, sample_id,
+                          os.path.join(output_dir, 'trajectory_positions.png'))
 
-    # ── D map (no background) ────────────────────────────────
-    plot_D_map(grid_x, grid_y, D_map, rois_um, sample_id,
-               os.path.join(output_dir, 'spatial_D_map.png'),
-               px_to_um=px_to_um)
-
-    # ── D map overlay on membrane ────────────────────────────
-    if image is not None:
+        # ── D map (no background) ────────────────────────────────
         plot_D_map(grid_x, grid_y, D_map, rois_um, sample_id,
-                   os.path.join(output_dir, 'spatial_D_overlay.png'),
-                   background_image=image, px_to_um=px_to_um)
+                   os.path.join(output_dir, 'spatial_D_map.png'),
+                   px_to_um=px_to_um)
 
-    # ── CSV ──────────────────────────────────────────────────
-    save_map_csv(grid_x, grid_y, D_map, n_eff_map,
-                 os.path.join(output_dir, 'spatial_map_data.csv'))
+        # ── D map overlay on membrane ────────────────────────────
+        if image is not None:
+            plot_D_map(grid_x, grid_y, D_map, rois_um, sample_id,
+                       os.path.join(output_dir, 'spatial_D_overlay.png'),
+                       background_image=image, px_to_um=px_to_um)
+
+        # ── CSV ──────────────────────────────────────────────────
+        save_map_csv(grid_x, grid_y, D_map, n_eff_map,
+                     os.path.join(output_dir, 'spatial_map_data.csv'))
+    else:
+        D_map = None
+        print("  [Per-embryo spatial map/plots/CSV skipped — summary-only mode]")
 
     # ── Moran's I ────────────────────────────────────────────
     print(f"\n  Computing Moran's I (neighbourhood {MORANS_NEIGHBOUR_UM} µm)...")
@@ -612,6 +617,11 @@ def main():
             pass
     print(f"Using kernel bandwidth = {KERNEL_BANDWIDTH_UM} µm\n")
 
+    so_input = input("Save per-embryo plots/CSVs? [Y/n]: ").strip().lower()
+    summary_only = so_input in ('n', 'no')
+    if summary_only:
+        print("Summary-only mode: per-embryo spatial maps/plots/CSV will be skipped.\n")
+
     samples = find_sample_files(folder)
     if not samples:
         print("No pkl files found. Exiting."); sys.exit(1)
@@ -619,7 +629,8 @@ def main():
     print(f"\n{len(samples)} sample(s) to process.\n")
     all_morans = {}
     for sample_id, pkl_path, mem_tif, roi_zip in samples:
-        _, morans = process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder)
+        _, morans = process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder,
+                                   summary_only=summary_only)
         all_morans[sample_id] = morans
 
     if not any(v is not None for v in all_morans.values()):

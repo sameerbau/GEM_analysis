@@ -424,7 +424,8 @@ def save_cross_sample_csv(all_sample_results, output_path):
 # ─────────────────────────────────────────────────────────────
 # Per-sample pipeline
 # ─────────────────────────────────────────────────────────────
-def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder):
+def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder,
+                   summary_only=False):
     print(f"\n{'='*60}")
     print(f"  {sample_id}")
     print(f"{'='*60}")
@@ -497,12 +498,15 @@ def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder):
         roi_sensitivity[roi_id] = records
 
     # Plots + CSV
-    print("\n  Generating plots...")
-    plot_sensitivity_curves(roi_sensitivity, sample_id,
-                            os.path.join(output_dir, 'sensitivity_curves.png'))
-    save_sensitivity_csv(roi_sensitivity, sample_id,
-                         os.path.join(output_dir, 'sensitivity_results.csv'))
-    print(f"\n  Output: {output_dir}")
+    if not summary_only:
+        print("\n  Generating per-embryo plots...")
+        plot_sensitivity_curves(roi_sensitivity, sample_id,
+                                os.path.join(output_dir, 'sensitivity_curves.png'))
+        save_sensitivity_csv(roi_sensitivity, sample_id,
+                             os.path.join(output_dir, 'sensitivity_results.csv'))
+        print(f"\n  Output: {output_dir}")
+    else:
+        print("\n  [Per-embryo plots/CSV skipped — summary-only mode]")
     return roi_sensitivity
 
 
@@ -517,6 +521,11 @@ def main():
     if not os.path.isdir(folder):
         print(f"Folder not found: {folder}"); sys.exit(1)
 
+    so_input = input("Save per-embryo plots/CSVs? [Y/n]: ").strip().lower()
+    summary_only = so_input in ('n', 'no')
+    if summary_only:
+        print("Summary-only mode: per-embryo outputs will be skipped.\n")
+
     samples = find_sample_files(folder)
     if not samples:
         print("No complete sample sets found. Exiting."); sys.exit(1)
@@ -524,7 +533,8 @@ def main():
     print(f"\n{len(samples)} sample(s) to process.\n")
     all_results = {}
     for sample_id, membrane_tif, roi_zip, pkl_path in samples:
-        result = process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder)
+        result = process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder,
+                                summary_only=summary_only)
         if result is not None:
             all_results[sample_id] = result
 

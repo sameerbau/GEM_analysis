@@ -494,7 +494,8 @@ def save_summary_csv(all_results, output_path):
 # ─────────────────────────────────────────────────────────────
 # Per-sample pipeline
 # ─────────────────────────────────────────────────────────────
-def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng):
+def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng,
+                   summary_only=False):
     print(f"\n{'='*60}")
     print(f"  {sample_id}")
     print(f"{'='*60}")
@@ -576,20 +577,21 @@ def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng):
         # and just show the histogram plots
         safe_roi_id = roi_id.replace('/', '_').replace('\\', '_')
 
-        # Enrichment plot
-        plot_null_distribution(
-            perm_enrich, actual_enrichment,
-            'Enrichment ratio', 'a.u.',
-            roi_id, sample_id,
-            os.path.join(output_dir, f'permutation_{safe_roi_id}_enrichment.png')
-        )
-        # D plot
-        plot_null_distribution(
-            perm_D, actual_median_D,
-            'Median D inside', 'µm²/s',
-            roi_id, sample_id,
-            os.path.join(output_dir, f'permutation_{safe_roi_id}_diffusion.png')
-        )
+        if not summary_only:
+            # Enrichment plot
+            plot_null_distribution(
+                perm_enrich, actual_enrichment,
+                'Enrichment ratio', 'a.u.',
+                roi_id, sample_id,
+                os.path.join(output_dir, f'permutation_{safe_roi_id}_enrichment.png')
+            )
+            # D plot
+            plot_null_distribution(
+                perm_D, actual_median_D,
+                'Median D inside', 'µm²/s',
+                roi_id, sample_id,
+                os.path.join(output_dir, f'permutation_{safe_roi_id}_diffusion.png')
+            )
 
         sample_results[roi_id] = {
             'actual_enrichment':   actual_enrichment,
@@ -603,17 +605,19 @@ def process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng):
             'n_placed':            n_placed,
         }
 
-    # Per-sample CSV
-    rows = []
-    for roi_id, res in sample_results.items():
-        rows.append({'sample_id': sample_id, 'roi_id': roi_id, **res})
-    if rows:
-        pd.DataFrame(rows).to_csv(
-            os.path.join(output_dir, 'permutation_results.csv'), index=False
-        )
-        print(f"\n  Saved: permutation_results.csv")
-
-    print(f"\n  Output: {output_dir}")
+    if not summary_only:
+        # Per-sample CSV
+        rows = []
+        for roi_id, res in sample_results.items():
+            rows.append({'sample_id': sample_id, 'roi_id': roi_id, **res})
+        if rows:
+            pd.DataFrame(rows).to_csv(
+                os.path.join(output_dir, 'permutation_results.csv'), index=False
+            )
+            print(f"\n  Saved: permutation_results.csv")
+        print(f"\n  Output: {output_dir}")
+    else:
+        print("\n  [Per-embryo plots/CSV skipped — summary-only mode]")
     return sample_results
 
 
@@ -637,6 +641,11 @@ def main():
             pass
     print(f"Using {N_PERMUTATIONS} permutations.\n")
 
+    so_input = input("Save per-embryo plots/CSVs? [Y/n]: ").strip().lower()
+    summary_only = so_input in ('n', 'no')
+    if summary_only:
+        print("Summary-only mode: per-embryo outputs will be skipped.\n")
+
     rng = np.random.default_rng(RANDOM_SEED)
 
     samples = find_sample_files(folder)
@@ -646,7 +655,8 @@ def main():
     print(f"\n{len(samples)} sample(s) to process.\n")
     all_results = {}
     for sample_id, membrane_tif, roi_zip, pkl_path in samples:
-        result = process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng)
+        result = process_sample(sample_id, membrane_tif, roi_zip, pkl_path, folder, rng,
+                                summary_only=summary_only)
         if result is not None:
             all_results[sample_id] = result
 
