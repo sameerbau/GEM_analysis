@@ -595,6 +595,7 @@ def process_sample(sample_id, pkl_path, mem_tif, roi_zip, folder):
 # Main
 # ─────────────────────────────────────────────────────────────
 def main():
+    global KERNEL_BANDWIDTH_UM
     print("Spatial Diffusion Map")
     print("======================\n")
 
@@ -604,7 +605,6 @@ def main():
 
     # Optional: prompt for bandwidth
     bw_input = input(f"Kernel bandwidth (µm) [{KERNEL_BANDWIDTH_UM}]: ").strip()
-    global KERNEL_BANDWIDTH_UM
     if bw_input:
         try:
             KERNEL_BANDWIDTH_UM = float(bw_input)
