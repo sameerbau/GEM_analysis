@@ -1,0 +1,12 @@
+sample_id,n_trajectories,correlation_length_um,method,in_ER_range,peak_morans_I,radius_at_peak_I_um
+Em.nd2,736,3.799,zero_crossing,True,0.3415,0.6
+Em001.nd2,421,2.078,zero_crossing,False,0.2892,0.3
+Em002.nd2,1414,3.508,zero_crossing,True,0.1603,0.6
+Em003.nd2,617,0.849,zero_crossing,False,0.2165,0.3
+Em004.nd2,883,0.693,zero_crossing,False,0.1362,1.8
+Em1.nd2,786,1.71,zero_crossing,False,0.2642,2.1
+Em2.nd2,860,1.489,zero_crossing,False,0.2481,1.2
+Em4.nd2,510,1.668,zero_crossing,False,0.2896,0.3
+Em5.nd2,768,2.047,zero_crossing,False,0.2727,0.9
+Em6.nd2,773,2.325,zero_crossing,False,0.2214,0.3
+Em7.nd2,606,3.499,zero_crossing,True,0.2689,3.0
