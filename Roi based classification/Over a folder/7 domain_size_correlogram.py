@@ -80,6 +80,8 @@ RANDOM_SEED       = 42
 ER_DOMAIN_MIN_UM  = 5.0
 ER_DOMAIN_MAX_UM  = 7.0
 
+N_BOOTSTRAP       = 500   # bootstrap replicates for ensemble CI on zero-crossing
+
 
 # ─────────────────────────────────────────────────────────────
 # File discovery
@@ -459,6 +461,232 @@ def save_summary_csv(all_results, output_path):
 
 
 # ─────────────────────────────────────────────────────────────
+# Ensemble correlogram — pool I(r) across samples
+# ─────────────────────────────────────────────────────────────
+def compute_ensemble_correlogram(all_results, rng, n_bootstrap=N_BOOTSTRAP):
+    """
+    Compute the n_pairs-weighted ensemble-average Moran's I(r) across all
+    samples, with a bootstrap estimate of the 95 % CI on the zero-crossing.
+
+    Why ensemble?
+    -------------
+    Individual samples have ~100-500 pairs per ring at short lags.
+    Moran's I variance scales as 1/n_pairs, so individual zero-crossings
+    can be shifted ±1-2 µm by noise alone.  Averaging across N samples
+    multiplies effective pair counts by ≈N, making the crossing point
+    far more reliable.
+
+    Algorithm
+    ---------
+    At each lag r:
+      1. Collect (I_s, n_pairs_s) from every sample with n_pairs >= MIN_PAIRS.
+      2. Compute n_pairs-weighted mean  →  ensemble_mean_I(r).
+      3. Compute weighted SE (using Kish effective-n denominator).
+    Zero-crossing of ensemble_mean_I → ensemble correlation length.
+    Bootstrap (resample samples with replacement) → 95 % CI on that crossing.
+    """
+    sample_ids = list(all_results.keys())
+    if not sample_ids:
+        return None
+
+    ref_radii = np.asarray(all_results[sample_ids[0]]['radii'])
+    n_lags    = len(ref_radii)
+    n_samples = len(sample_ids)
+
+    # Build (n_samples × n_lags) arrays
+    I_mat = np.full((n_samples, n_lags), np.nan)
+    w_mat = np.zeros((n_samples, n_lags))   # weight = n_pairs
+
+    for s, sid in enumerate(sample_ids):
+        res = all_results[sid]
+        for k in range(n_lags):
+            I   = res['Is'][k]
+            np_ = res['n_pairs'][k]
+            if not np.isnan(I) and np_ >= MIN_PAIRS:
+                I_mat[s, k] = I
+                w_mat[s, k] = np_
+
+    # Weighted mean and SE per lag
+    mean_I      = np.full(n_lags, np.nan)
+    se_I        = np.full(n_lags, np.nan)
+    n_valid     = np.zeros(n_lags, dtype=int)
+    total_pairs = np.zeros(n_lags, dtype=int)
+
+    for k in range(n_lags):
+        valid = ~np.isnan(I_mat[:, k])
+        n_v   = int(valid.sum())
+        n_valid[k] = n_v
+        if n_v == 0:
+            continue
+        I_v = I_mat[valid, k]
+        w_v = w_mat[valid, k]
+        total_pairs[k] = int(w_v.sum())
+        w_norm  = w_v / w_v.sum()
+        wmean   = float(np.dot(w_norm, I_v))
+        mean_I[k] = wmean
+        if n_v >= 2:
+            wvar  = float(np.dot(w_norm, (I_v - wmean) ** 2))
+            # Kish effective sample size for weighted average
+            n_eff = w_v.sum() ** 2 / (w_v ** 2).sum()
+            se_I[k] = float(np.sqrt(wvar / max(n_eff - 1.0, 1.0)))
+
+    # Ensemble zero-crossing (p-values not applicable; pass NaNs)
+    ens_cl, ens_method = find_correlation_length(
+        ref_radii, mean_I, np.full(n_lags, np.nan))
+
+    # Bootstrap CI on zero-crossing (resample samples with replacement)
+    boot_cls = []
+    for _ in range(n_bootstrap):
+        idx      = rng.integers(0, n_samples, size=n_samples)
+        boot_I   = np.full(n_lags, np.nan)
+        for k in range(n_lags):
+            I_b = I_mat[idx, k]
+            w_b = w_mat[idx, k]
+            ok  = ~np.isnan(I_b)
+            if ok.sum() == 0:
+                continue
+            I_bv   = I_b[ok]
+            w_bv   = w_b[ok]
+            w_norm = w_bv / w_bv.sum()
+            boot_I[k] = float(np.dot(w_norm, I_bv))
+        bcl, _ = find_correlation_length(
+            ref_radii, boot_I, np.full(n_lags, np.nan))
+        if not np.isnan(bcl):
+            boot_cls.append(bcl)
+
+    if len(boot_cls) >= 10:
+        ci_lo    = float(np.percentile(boot_cls, 2.5))
+        ci_hi    = float(np.percentile(boot_cls, 97.5))
+        boot_std = float(np.std(boot_cls))
+    else:
+        ci_lo = ci_hi = boot_std = np.nan
+
+    return {
+        'radii':       list(ref_radii),
+        'mean_I':      list(mean_I),
+        'se_I':        list(se_I),
+        'n_valid':     list(n_valid),
+        'total_pairs': list(total_pairs),
+        'corr_length': ens_cl,
+        'corr_method': ens_method if ens_method else 'none',
+        'boot_ci_lo':  ci_lo,
+        'boot_ci_hi':  ci_hi,
+        'boot_std':    boot_std,
+        'n_bootstrap': n_bootstrap,
+        'n_samples':   n_samples,
+    }
+
+
+def plot_ensemble_correlogram(ensemble_res, all_results, output_path):
+    """
+    Plot ensemble-average I(r) (black, thick) with ±1 SE shading,
+    individual sample curves in the background (thin, coloured),
+    ensemble zero-crossing + bootstrap 95 % CI band, and total-pairs
+    bar chart in a lower panel.
+    """
+    radii       = np.asarray(ensemble_res['radii'])
+    mean_I      = np.asarray(ensemble_res['mean_I'],  dtype=float)
+    se_I        = np.asarray(ensemble_res['se_I'],    dtype=float)
+    n_valid     = np.asarray(ensemble_res['n_valid'])
+    total_pairs = np.asarray(ensemble_res['total_pairs'])
+
+    valid = ~np.isnan(mean_I)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8), sharex=True,
+                                    gridspec_kw={'height_ratios': [3, 1]})
+
+    # ── Top: Moran's I ───────────────────────────────────────
+    ax1.axhline(0, color='black', linewidth=0.8, zorder=2)
+    ax1.axvspan(ER_DOMAIN_MIN_UM, ER_DOMAIN_MAX_UM, alpha=0.12, color='limegreen',
+                label=f'Expected ER domain ({ER_DOMAIN_MIN_UM}–{ER_DOMAIN_MAX_UM} µm)')
+
+    # Individual sample curves (background)
+    colors = plt.cm.tab10(np.linspace(0, 1, max(len(all_results), 1)))
+    for i, (sid, res) in enumerate(all_results.items()):
+        r_s  = np.asarray(res['radii'])
+        I_s  = np.asarray(res['Is'], dtype=float)
+        np_s = np.asarray(res['n_pairs'])
+        rel  = (~np.isnan(I_s)) & (np_s >= MIN_PAIRS)
+        if rel.any():
+            ax1.plot(r_s[rel], I_s[rel], '-', color=colors[i],
+                     linewidth=0.9, alpha=0.30, zorder=1)
+        # Per-sample zero-crossing as faint vertical
+        cl_s = res['corr_length']
+        if not np.isnan(cl_s):
+            ax1.axvline(cl_s, color=colors[i], linewidth=0.7,
+                        linestyle=':', alpha=0.50, zorder=1)
+
+    # Ensemble ±1 SE band
+    se_ok = valid & ~np.isnan(se_I)
+    if se_ok.any():
+        ax1.fill_between(radii[valid],
+                         mean_I[valid] - np.where(se_ok[valid], se_I[valid], 0),
+                         mean_I[valid] + np.where(se_ok[valid], se_I[valid], 0),
+                         alpha=0.22, color='black',
+                         label='±1 SE (across samples)', zorder=3)
+
+    # Ensemble mean
+    if valid.any():
+        ax1.plot(radii[valid], mean_I[valid], '-', color='black',
+                 linewidth=2.8, zorder=4,
+                 label=f'Ensemble mean I(r)  [n={ensemble_res["n_samples"]} samples]')
+
+    # Ensemble zero-crossing + bootstrap CI
+    cl     = ensemble_res['corr_length']
+    ci_lo  = ensemble_res['boot_ci_lo']
+    ci_hi  = ensemble_res['boot_ci_hi']
+    if not np.isnan(cl):
+        lbl = f'Ensemble corr. length = {cl:.2f} µm  ({ensemble_res["corr_method"]})'
+        if not np.isnan(ci_lo):
+            lbl += f'\n95 % boot. CI: [{ci_lo:.2f}, {ci_hi:.2f}] µm'
+        ax1.axvline(cl, color='darkorange', linewidth=2.5,
+                    linestyle='--', zorder=5, label=lbl)
+        if not np.isnan(ci_lo):
+            ax1.axvspan(ci_lo, ci_hi, alpha=0.18, color='darkorange', zorder=2)
+
+    ax1.set_ylabel("Moran's I", fontsize=11)
+    ax1.set_title(
+        f"Ensemble spatial D correlogram — {ensemble_res['n_samples']} embryos\n"
+        "Black: n_pairs-weighted mean ± 1 SE  |  coloured: individual embryos  |  "
+        "dotted: per-embryo zero-crossings",
+        fontsize=10)
+    ax1.legend(fontsize=8, loc='upper right')
+    ax1.grid(alpha=0.3)
+
+    # ── Bottom: total pairs per lag ───────────────────────────
+    ax2.bar(radii[valid], total_pairs[valid],
+            width=R_STEP_UM * 0.88, color='steelblue', alpha=0.65, align='center')
+    ax2.axvspan(ER_DOMAIN_MIN_UM, ER_DOMAIN_MAX_UM, alpha=0.12, color='limegreen')
+    if not np.isnan(cl):
+        ax2.axvline(cl, color='darkorange', linewidth=2, linestyle='--')
+    ax2.set_xlabel('Lag distance r (µm)', fontsize=11)
+    ax2.set_ylabel('Total pairs\n(all samples)', fontsize=9)
+    ax2.grid(axis='y', alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"  Saved: {os.path.basename(output_path)}")
+
+
+def save_ensemble_csv(ensemble_res, output_path):
+    rows = []
+    for r, I, se, nv, tp in zip(
+            ensemble_res['radii'], ensemble_res['mean_I'],
+            ensemble_res['se_I'],  ensemble_res['n_valid'],
+            ensemble_res['total_pairs']):
+        rows.append({
+            'lag_um':      round(float(r), 3),
+            'ensemble_I':  round(float(I), 6)  if not np.isnan(I)  else np.nan,
+            'se_I':        round(float(se), 6) if not np.isnan(se) else np.nan,
+            'n_samples':   int(nv),
+            'total_pairs': int(tp),
+        })
+    pd.DataFrame(rows).to_csv(output_path, index=False)
+    print(f"  Saved: {os.path.basename(output_path)}")
+
+
+# ─────────────────────────────────────────────────────────────
 # Per-sample pipeline
 # ─────────────────────────────────────────────────────────────
 def process_sample(sample_id, pkl_path, folder, radii_sweep, rng,
@@ -642,6 +870,39 @@ def main():
         all_results, os.path.join(summary_dir, 'domain_size_comparison.png'))
     save_summary_csv(
         all_results, os.path.join(summary_dir, 'summary_table.csv'))
+
+    # ── Ensemble correlogram ──────────────────────────────────
+    print(f"\n{'='*60}")
+    print("Ensemble correlogram (pooling across all samples)")
+    print(f"{'='*60}")
+    print(f"  Running {N_BOOTSTRAP} bootstrap replicates for zero-crossing CI…")
+    ens = compute_ensemble_correlogram(all_results, rng, n_bootstrap=N_BOOTSTRAP)
+    if ens is not None:
+        plot_ensemble_correlogram(
+            ens, all_results,
+            os.path.join(summary_dir, 'ensemble_correlogram.png'))
+        save_ensemble_csv(
+            ens, os.path.join(summary_dir, 'ensemble_correlogram_data.csv'))
+
+        cl     = ens['corr_length']
+        ci_lo  = ens['boot_ci_lo']
+        ci_hi  = ens['boot_ci_hi']
+        std_cl = ens['boot_std']
+        if not np.isnan(cl):
+            in_er = ER_DOMAIN_MIN_UM <= cl <= ER_DOMAIN_MAX_UM
+            print(f"\n  --> Ensemble correlation length : {cl:.2f} µm  "
+                  f"({ens['corr_method']})")
+            if not np.isnan(ci_lo):
+                print(f"      Bootstrap 95 % CI          : "
+                      f"[{ci_lo:.2f}, {ci_hi:.2f}] µm  "
+                      f"(SD = {std_cl:.2f} µm, n={ens['n_bootstrap']} replicates)")
+            print(f"      ER reference range          : "
+                  f"{ER_DOMAIN_MIN_UM}–{ER_DOMAIN_MAX_UM} µm")
+            print(f"      Match                       : "
+                  f"{'YES ✓' if in_er else 'no'}")
+        else:
+            print(f"  --> Ensemble correlation length : not determined "
+                  f"({ens['corr_method']})")
 
     print(f"\nSummary saved to: {summary_dir}")
     print("\nDone.")
