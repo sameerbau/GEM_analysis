@@ -204,14 +204,14 @@ def find_correlation_length(radii, Is, ps):
     Is    = np.asarray(Is, dtype=float)
     ps    = np.asarray(ps, dtype=float)
 
-    # Only reliable, valid points
-    valid = ~np.isnan(Is) & ~np.isnan(ps)
-    if valid.sum() < 2:
+    # Valid I points (p-values may be absent, e.g. for ensemble curves)
+    valid_I = ~np.isnan(Is)
+    if valid_I.sum() < 2:
         return np.nan, None
 
-    rv = radii[valid]
-    Iv = Is[valid]
-    pv = ps[valid]
+    rv = radii[valid_I]
+    Iv = Is[valid_I]
+    pv = ps[valid_I]   # may contain NaN when p-values are unavailable
 
     if np.all(Iv <= 0):
         return np.nan, 'always_negative'
@@ -222,12 +222,12 @@ def find_correlation_length(radii, Is, ps):
             frac = Iv[i] / (Iv[i] - Iv[i + 1])
             return float(rv[i] + frac * (rv[i + 1] - rv[i])), 'zero_crossing'
 
-    # (b) Non-significant: first radius with p > P_THRESHOLD
+    # (b) Non-significant: first radius with a valid p > P_THRESHOLD
     for r, I, p in zip(rv, Iv, pv):
-        if p > P_THRESHOLD:
+        if not np.isnan(p) and p > P_THRESHOLD:
             return float(r), 'non_significant'
 
-    # Significant across entire sweep
+    # Significant across entire sweep (or no p-values available)
     return float(rv[-1]), 'always_significant'
 
 
