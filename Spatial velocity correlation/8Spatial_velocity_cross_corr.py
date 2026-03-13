@@ -140,12 +140,87 @@ def load_pkl(path):
 
 
 def find_sample_files(folder):
+    """
+    Find per-sample pkl files.  Accepts folders containing:
+      • analyzed_*.pkl  (output of 2diffusion_analyzer.py) — preferred
+      • tracked_*.pkl   (output of 1Traj_load_v1.py)       — fallback / direct use
+    Returns list of (sample_id, path) tuples.
+    """
     paths = sorted(glob.glob(os.path.join(folder, 'analyzed_*.pkl')))
-    if not paths:
-        print(f"  [WARN] No analyzed_*.pkl found in {folder}")
-        return []
-    return [(os.path.splitext(os.path.basename(p))[0].replace('analyzed_', ''), p)
-            for p in paths]
+    if paths:
+        return [(os.path.splitext(os.path.basename(p))[0].replace('analyzed_', ''), p)
+                for p in paths]
+
+    # Fall back to tracked_*.pkl directly
+    paths = sorted(glob.glob(os.path.join(folder, 'tracked_*.pkl')))
+    if paths:
+        print(f"  [INFO] No analyzed_*.pkl found; using tracked_*.pkl directly.")
+        return [(os.path.splitext(os.path.basename(p))[0], p) for p in paths]
+
+    print(f"  [WARN] No analyzed_*.pkl or tracked_*.pkl found in {folder}")
+    return []
+
+
+def _find_tracked_companion(analyzed_path):
+    """
+    Given path to  .../analyzed_trajectories/analyzed_tracked_Foo.pkl
+    look for the matching   .../processed_trajectories/tracked_Foo.pkl
+
+    The diffusion analyzer names its output as:
+        output_dir/analyzed_<base_name>.pkl
+    where base_name is the stem of the input tracked_*.pkl.
+    So the companion is simply <base_name>.pkl (i.e., strip 'analyzed_').
+
+    Search order:
+      1. Same folder as the analyzed file
+      2. Sibling folder 'processed_trajectories' of the analyzed folder's parent
+      3. Parent folder of the analyzed folder
+    """
+    folder       = os.path.dirname(analyzed_path)
+    stem         = os.path.splitext(os.path.basename(analyzed_path))[0]  # analyzed_tracked_Foo.nd2
+    tracked_name = stem.replace('analyzed_', '', 1) + '.pkl'              # tracked_Foo.nd2.pkl
+
+    candidates = [
+        os.path.join(folder, tracked_name),
+        os.path.join(os.path.dirname(folder), 'processed_trajectories', tracked_name),
+        os.path.join(os.path.dirname(folder), tracked_name),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+def _augment_with_time(analyzed_trajs, tracked_path):
+    """
+    Load the companion tracked_*.pkl and copy the 'time' array into each
+    matching trajectory in analyzed_trajs (matched by trajectory 'id').
+
+    Returns the number of trajectories successfully augmented.
+    """
+    tracked_data = load_pkl(tracked_path)
+    if tracked_data is None:
+        return 0
+
+    tracked_trajs = extract_trajectories(tracked_data)
+    # Build id → time map from tracked data
+    time_by_id = {}
+    for t in tracked_trajs:
+        tid = t.get('id')
+        if tid is not None and 'time' in t:
+            time_by_id[tid] = np.asarray(t['time'], dtype=float)
+
+    n_augmented = 0
+    for traj in analyzed_trajs:
+        tid = traj.get('id')
+        if tid in time_by_id:
+            t_arr = time_by_id[tid]
+            x_arr = np.asarray(traj.get('x', []), dtype=float)
+            # Only use if lengths match
+            if len(t_arr) == len(x_arr):
+                traj['time'] = t_arr
+                n_augmented += 1
+    return n_augmented
 
 
 def extract_trajectories(data):
@@ -444,10 +519,40 @@ def load_condition(folder, name):
     for sid, path in samples:
         data  = load_pkl(path)
         trajs = extract_trajectories(data)
-        res   = compute_sample_Cv_r(trajs)
+
+        # ── Augment with 'time' from companion tracked_*.pkl if needed ───
+        needs_time = all('time' not in t and 'frame' not in t for t in trajs if trajs)
+        if needs_time and trajs:
+            companion = _find_tracked_companion(path)
+            if companion:
+                n_aug = _augment_with_time(trajs, companion)
+                print(f"  [INFO] {sid}: loaded 'time' from companion tracked file "
+                      f"({n_aug}/{len(trajs)} trajectories augmented)")
+            else:
+                # Last resort: ask user for the processed_trajectories folder once
+                if not hasattr(load_condition, '_tracked_folder'):
+                    ans = input(
+                        "\n  Could not auto-find the tracked_*.pkl companion files.\n"
+                        "  Enter the folder containing tracked_*.pkl files "
+                        "(or press Enter to skip): "
+                    ).strip()
+                    load_condition._tracked_folder = ans if ans else None
+                tf = load_condition._tracked_folder
+                if tf:
+                    tracked_name = sid + '.pkl'
+                    tp = os.path.join(tf, tracked_name)
+                    if os.path.isfile(tp):
+                        n_aug = _augment_with_time(trajs, tp)
+                        print(f"  [INFO] {sid}: augmented {n_aug} trajectories from {tp}")
+
+        res = compute_sample_Cv_r(trajs)
 
         if res is None:
-            print(f"  [SKIP] {sid}: no frame/time field — cannot match co-temporal particles")
+            print(f"  [SKIP] {sid}: no frame/time field — cannot match co-temporal particles.\n"
+                  f"         Tip: point this script at the 'processed_trajectories' folder\n"
+                  f"         (which contains tracked_*.pkl files with 'time' arrays), or\n"
+                  f"         keep both 'analyzed_trajectories' and 'processed_trajectories'\n"
+                  f"         as siblings so the script can find them automatically.")
             continue
         if res['n_trajs'] < MIN_TRAJS:
             print(f"  [SKIP] {sid}: only {res['n_trajs']} qualifying trajectories")
