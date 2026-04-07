@@ -1,0 +1,34 @@
+=================================================================
+Step 4 — Pooled Experiment Analysis Report (v2)
+=================================================================
+
+Experiments included (4):
+  set1_3em_001  (precomputed=True)
+  set1_3em_002  (precomputed=False)
+  set1_3em_003  (precomputed=False)
+  set1_3em_004  (precomputed=False)
+
+Total cells after filtering: 144
+  Mitotic (circularity >= 0.7): 40 cells
+  Interphase: 104 cells
+
+Circularity threshold: 0.7
+
+Correlation — D_median vs circularity:
+  Pearson r = 0.1148,  p = 1.7052e-01
+
+Correlation — D_median vs area:
+  Pearson r = 0.2483,  p = 2.6970e-03
+
+Mitotic vs Interphase (cell-level median D):
+  Mitotic    median D = 0.02113 µm²/s  (IQR 0.02737)
+  Interphase median D = 0.01997 µm²/s  (IQR 0.01678)
+  Fold change (int/mit) = 0.945x
+  Mann-Whitney U=2086.0,  p=9.8043e-01  [ns]
+  KS stat=0.1231,  p=7.2543e-01
+
+Per-experiment breakdown:
+  set1_3em_001: mitotic n=8, median=0.01774 | interphase n=32, median=0.02282
+  set1_3em_002: mitotic n=6, median=0.00667 | interphase n=4, median=0.01554
+  set1_3em_003: mitotic n=16, median=0.02858 | interphase n=23, median=0.02803
+  set1_3em_004: mitotic n=10, median=0.01889 | interphase n=45, median=0.01765
