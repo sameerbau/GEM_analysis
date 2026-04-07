@@ -1,0 +1,28 @@
+=================================================================
+Step 4 — Pooled Experiment Analysis Report
+=================================================================
+
+Experiments included (1):
+  set1_3em_001:  /home/user/GEM_analysis/GEM_mitosis/diffusion_per_cell.csv
+
+Total cells after filtering: 40
+  Mitotic (0.7): 8 cells
+  Interphase: 32 cells
+
+Circularity threshold: 0.7
+
+Correlation — D_median vs circularity:
+  Pearson r = -0.0403,  p = 8.0521e-01
+
+Correlation — D_median vs area:
+  Pearson r = 0.4729,  p = 2.0616e-03
+
+Mitotic vs Interphase:
+  Mitotic    median D = 0.01774 µm²/s  (IQR 0.01407)
+  Interphase median D = 0.02282 µm²/s  (IQR 0.02014)
+  Fold change (int/mit) = 1.286×
+  Mann-Whitney U=86.0,  p=1.6359e-01  [ns]
+  KS stat=0.3750,  p=2.8949e-01
+
+Per-experiment breakdown:
+  set1_3em_001: mitotic n=8, median=0.01774 | interphase n=32, median=0.02282

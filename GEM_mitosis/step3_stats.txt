@@ -1,0 +1,37 @@
+============================================================
+Step 3 — Circularity / Diffusion Analysis Report
+============================================================
+
+Circularity threshold (GMM): 0.5450
+Threshold used:              0.7000
+  (GMM component means: 0.445, 0.674)
+
+Cell classification:
+  Mitotic:    8 cells
+  Interphase: 32 cells
+
+Correlation — D_median vs circularity:
+  Pearson r = 0.0000,  p = 8.0521e-01
+
+Correlation — D_median vs area:
+  Pearson r = 0.4729,  p = 2.0616e-03
+
+Mitotic vs Interphase (cell-level median D):
+  Mitotic    median D = 0.01774 µm²/s  (IQR 0.01407)
+  Interphase median D = 0.02282 µm²/s  (IQR 0.02014)
+  Fold change (interphase/mitotic) = 1.286×
+  Mann-Whitney U = 86.0,  p = 1.6359e-01
+  Kolmogorov-Smirnov stat = 0.3750,  p = 2.8949e-01
+
+Between-mitotic-cell (Kruskal-Wallis):
+  H = 3.693,  p = 8.1438e-01
+
+Per-cell D values (mitotic cells, sorted by D_median):
+  Cell  48  circ=0.746  n=7  D_median=0.00786 µm²/s
+  Cell 228  circ=0.769  n=9  D_median=0.00899 µm²/s
+  Cell 180  circ=0.844  n=5  D_median=0.01033 µm²/s
+  Cell 215  circ=0.739  n=10  D_median=0.01426 µm²/s
+  Cell 143  circ=0.724  n=10  D_median=0.02122 µm²/s
+  Cell  88  circ=0.744  n=9  D_median=0.02401 µm²/s
+  Cell 214  circ=0.703  n=7  D_median=0.02422 µm²/s
+  Cell  45  circ=0.777  n=13  D_median=0.02947 µm²/s
