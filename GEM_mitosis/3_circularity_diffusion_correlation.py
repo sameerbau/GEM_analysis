@@ -46,7 +46,7 @@ SCRIPT_DIR = Path(__file__).parent
 IN_PKL     = SCRIPT_DIR / "diffusion_per_cell.pkl"
 
 # Set a fixed circularity threshold to override GMM (e.g. 0.72), or None to use GMM.
-MANUAL_CIRCULARITY_THRESHOLD = None
+MANUAL_CIRCULARITY_THRESHOLD = 0.70
 
 # Minimum number of valid trajectories a cell needs to enter the
 # mitotic-vs-interphase comparison (cells with very few D values are noisy)
