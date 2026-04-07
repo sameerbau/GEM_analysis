@@ -1,0 +1,57 @@
+============================================================
+Step 3 — Circularity / Diffusion Analysis Report
+============================================================
+
+Circularity threshold (GMM): 0.5450
+Threshold used:              0.5450
+  (GMM component means: 0.445, 0.674)
+
+Cell classification:
+  Mitotic:    28 cells
+  Interphase: 12 cells
+
+Correlation — D_median vs circularity:
+  Pearson r = 0.0000,  p = 8.0521e-01
+
+Correlation — D_median vs area:
+  Pearson r = 0.4729,  p = 2.0616e-03
+
+Mitotic vs Interphase (cell-level median D):
+  Mitotic    median D = 0.02083 µm²/s  (IQR 0.01997)
+  Interphase median D = 0.02299 µm²/s  (IQR 0.01542)
+  Fold change (interphase/mitotic) = 1.104×
+  Mann-Whitney U = 155.0,  p = 7.1218e-01
+  Kolmogorov-Smirnov stat = 0.2381,  p = 6.5237e-01
+
+Between-mitotic-cell (Kruskal-Wallis):
+  H = 37.385,  p = 8.8105e-02
+
+Per-cell D values (mitotic cells, sorted by D_median):
+  Cell 117  circ=0.629  n=5  D_median=0.00372 µm²/s
+  Cell  48  circ=0.746  n=7  D_median=0.00786 µm²/s
+  Cell 168  circ=0.613  n=5  D_median=0.00823 µm²/s
+  Cell 228  circ=0.769  n=9  D_median=0.00899 µm²/s
+  Cell 182  circ=0.613  n=10  D_median=0.00913 µm²/s
+  Cell 180  circ=0.844  n=5  D_median=0.01033 µm²/s
+  Cell  90  circ=0.634  n=10  D_median=0.01195 µm²/s
+  Cell  97  circ=0.601  n=13  D_median=0.01284 µm²/s
+  Cell 234  circ=0.679  n=5  D_median=0.01317 µm²/s
+  Cell 215  circ=0.739  n=10  D_median=0.01426 µm²/s
+  Cell 199  circ=0.689  n=5  D_median=0.01546 µm²/s
+  Cell  30  circ=0.696  n=8  D_median=0.01611 µm²/s
+  Cell 105  circ=0.601  n=12  D_median=0.01964 µm²/s
+  Cell 239  circ=0.690  n=6  D_median=0.02043 µm²/s
+  Cell 143  circ=0.724  n=10  D_median=0.02122 µm²/s
+  Cell  88  circ=0.744  n=9  D_median=0.02401 µm²/s
+  Cell 214  circ=0.703  n=7  D_median=0.02422 µm²/s
+  Cell 224  circ=0.693  n=6  D_median=0.02442 µm²/s
+  Cell 220  circ=0.576  n=11  D_median=0.02639 µm²/s
+  Cell  45  circ=0.777  n=13  D_median=0.02947 µm²/s
+  Cell 128  circ=0.593  n=6  D_median=0.03225 µm²/s
+  Cell 127  circ=0.666  n=10  D_median=0.03358 µm²/s
+  Cell 133  circ=0.659  n=8  D_median=0.03533 µm²/s
+  Cell 113  circ=0.580  n=5  D_median=0.04682 µm²/s
+  Cell 147  circ=0.696  n=7  D_median=0.06889 µm²/s
+  Cell 223  circ=0.640  n=12  D_median=0.06944 µm²/s
+  Cell 164  circ=0.691  n=7  D_median=0.07236 µm²/s
+  Cell  93  circ=0.553  n=7  D_median=0.07492 µm²/s
