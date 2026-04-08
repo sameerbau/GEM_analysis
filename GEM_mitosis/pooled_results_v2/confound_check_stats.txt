@@ -1,0 +1,36 @@
+=================================================================
+Step 8 — Confound Check: area vs diffusivity
+=================================================================
+
+Bootstrap iterations: 2000   k_min (subsample size): 5
+
+--- [All cells]  n_cells=144 ---
+  1. Confound audit (Spearman):
+     area vs n_traj:    rho=-0.039  p=6.4303e-01  [ns]
+     area vs mean logD: rho=0.298  p=2.8361e-04  [***]
+     n_traj vs mean logD: rho=0.082  p=3.2797e-01  [ns]
+  2. Bootstrap downsample to k=5 traj/cell:
+     median rho=0.261  95% CI [0.197, 0.330]  p≈5.0000e-04  [***]
+  3. Partial Spearman r(area, logD | n_traj):
+     rho=0.303  p=2.2724e-04  [***]
+
+--- [Mitotic]  n_cells=40 ---
+  1. Confound audit (Spearman):
+     area vs n_traj:    rho=0.268  p=9.4481e-02  [ns]
+     area vs mean logD: rho=0.443  p=4.1678e-03  [**]
+     n_traj vs mean logD: rho=0.175  p=2.8081e-01  [ns]
+  2. Bootstrap downsample to k=5 traj/cell:
+     median rho=0.397  95% CI [0.281, 0.487]  p≈5.0000e-04  [***]
+  3. Partial Spearman r(area, logD | n_traj):
+     rho=0.418  p=7.2773e-03  [**]
+
+--- [Interphase]  n_cells=104 ---
+  1. Confound audit (Spearman):
+     area vs n_traj:    rho=-0.143  p=1.4881e-01  [ns]
+     area vs mean logD: rho=0.244  p=1.2533e-02  [*]
+     n_traj vs mean logD: rho=0.042  p=6.7233e-01  [ns]
+  2. Bootstrap downsample to k=5 traj/cell:
+     median rho=0.216  95% CI [0.134, 0.299]  p≈5.0000e-04  [***]
+  3. Partial Spearman r(area, logD | n_traj):
+     rho=0.253  p=9.6080e-03  [**]
+

@@ -1,0 +1,60 @@
+=================================================================
+Step 7 — Nested ANOVA Variance Decomposition Report
+(following Hubatsch et al. 2023, Biophys J, PMC10027447)
+=================================================================
+
+Total trajectories: 1,111  |  Cells: 144  |  Experiments: 4
+
+--- [All cells]  N_traj=1111, N_cells=144 ---
+  Grand mean log(D) = -3.9404
+  SS_total = 1931.4137
+  η² between-experiment  = 0.0231  (2.3%)
+  η² between-cell        = 0.1858  (18.6%)
+  η² within-cell         = 0.7911  (79.1%)
+
+--- [Mitotic]  N_traj=317, N_cells=40 ---
+  Grand mean log(D) = -3.9043
+  SS_total = 598.2634
+  η² between-experiment  = 0.0596  (6.0%)
+  η² between-cell        = 0.1605  (16.1%)
+  η² within-cell         = 0.7799  (78.0%)
+
+--- [Interphase]  N_traj=794, N_cells=104 ---
+  Grand mean log(D) = -3.9548
+  SS_total = 1332.5730
+  η² between-experiment  = 0.0335  (3.4%)
+  η² between-cell        = 0.1700  (17.0%)
+  η² within-cell         = 0.7965  (79.6%)
+
+--- Within-cell SD of log(D): mitotic vs interphase ---
+  Mitotic    median=1.0774  IQR=0.6366
+  Interphase median=1.1416  IQR=0.4395
+  Mann-Whitney p = 7.0625e-01  [ns]
+
+--- Correlations: within-cell SD of log(D) vs morphology ---
+  [Mitotic] within-cell SD vs circularity (n=40):
+    Pearson  r=0.110   p=4.9927e-01  [ns]
+    Spearman ρ=0.123  p=4.5068e-01  [ns]
+  [Mitotic] within-cell SD vs area_px (n=40):
+    Pearson  r=0.277   p=8.3374e-02  [ns]
+    Spearman ρ=0.241  p=1.3397e-01  [ns]
+  [Interphase] within-cell SD vs circularity (n=104):
+    Pearson  r=0.003   p=9.7425e-01  [ns]
+    Spearman ρ=-0.017  p=8.6378e-01  [ns]
+  [Interphase] within-cell SD vs area_px (n=104):
+    Pearson  r=-0.059   p=5.5340e-01  [ns]
+    Spearman ρ=-0.021  p=8.3400e-01  [ns]
+
+--- Correlations: mean log(D) per cell vs morphology ---
+  [Mitotic] mean log(D) vs circularity (n=40):
+    Pearson  r=-0.003   p=9.8344e-01  [ns]
+    Spearman ρ=0.098  p=5.4616e-01  [ns]
+  [Mitotic] mean log(D) vs area_px (n=40):
+    Pearson  r=0.175   p=2.7954e-01  [ns]
+    Spearman ρ=0.443  p=4.1678e-03  [**]
+  [Interphase] mean log(D) vs circularity (n=104):
+    Pearson  r=0.049   p=6.1997e-01  [ns]
+    Spearman ρ=0.040  p=6.8717e-01  [ns]
+  [Interphase] mean log(D) vs area_px (n=104):
+    Pearson  r=0.241   p=1.3621e-02  [*]
+    Spearman ρ=0.244  p=1.2533e-02  [*]
