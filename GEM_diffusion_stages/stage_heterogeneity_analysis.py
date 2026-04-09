@@ -69,24 +69,43 @@ SCRIPT_DIR   = Path(__file__).parent
 MANIFEST_CSV = SCRIPT_DIR / "stage_manifest.csv"
 OUTPUT_DIR   = SCRIPT_DIR / "results"
 
-# Canonical developmental order (controls axis ordering everywhere)
-STAGE_ORDER = ["syncytial", "cellularization", "mzt", "gastrulation"]
+# Stage order, labels and colours are derived automatically from the manifest
+# (first-appearance order in the CSV sets the axis order).
+# You can use ANY stage names — PB, NC, Cellularization, Gastrulation, etc.
+# These globals are populated by _init_stage_config() at startup.
+STAGE_ORDER   : list = []
+STAGE_LABELS  : dict = {}
+STAGE_COLOURS : dict = {}
 
-# Display labels for plot axes
-STAGE_LABELS = {
-    "syncytial":       "Syncytial",
-    "cellularization": "Cellularization",
-    "mzt":             "MZT",
-    "gastrulation":    "Gastrulation",
-}
+# Colour palette (Nature journal style, cycles for >8 stages)
+_STAGE_PALETTE = [
+    "#4dbbd5", "#00a087", "#f39b7f", "#e64b35",
+    "#3c5488", "#b09c85", "#7e6ebf", "#91d1c2",
+]
 
-# Nature-palette colours per stage
-STAGE_COLOURS = {
-    "syncytial":       "#4dbbd5",
-    "cellularization": "#00a087",
-    "mzt":             "#f39b7f",
-    "gastrulation":    "#e64b35",
-}
+
+def _init_stage_config(manifest_path: Path) -> None:
+    """
+    Read stage names from the manifest and populate STAGE_ORDER, STAGE_LABELS,
+    STAGE_COLOURS.  Stage order = first-appearance order in the CSV, so you
+    control the axis ordering simply by putting rows in the order you want.
+    Any stage name is accepted (PB, NC, Cellularization, Gastrulation, …).
+    """
+    global STAGE_ORDER, STAGE_LABELS, STAGE_COLOURS
+    df = pd.read_csv(manifest_path)
+    if "stage" not in df.columns:
+        raise ValueError("Manifest must have a 'stage' column.")
+    seen: dict = {}
+    for s in df["stage"].astype(str).str.strip():
+        if s not in seen:
+            seen[s] = len(seen)
+    STAGE_ORDER  = sorted(seen, key=seen.__getitem__)
+    # Display label: replace underscores/hyphens with spaces, title-case
+    STAGE_LABELS = {s: s.replace("_", " ").replace("-", " ") for s in STAGE_ORDER}
+    STAGE_COLOURS = {
+        s: _STAGE_PALETTE[i % len(_STAGE_PALETTE)]
+        for i, s in enumerate(STAGE_ORDER)
+    }
 
 # Quality filter: minimum valid trajectories per cell (matches GEM_mitosis default)
 MIN_TRAJ_PER_CELL  = 5
@@ -187,12 +206,7 @@ def load_manifest(path: Path) -> list:
 
     rows = []
     for _, row in df.iterrows():
-        stage = str(row["stage"]).strip().lower()
-        if stage not in STAGE_ORDER:
-            raise ValueError(
-                f"Unknown stage '{stage}' in manifest. "
-                f"Valid values: {STAGE_ORDER}"
-            )
+        stage = str(row["stage"]).strip()
         csv_path = Path(str(row["diffusion_per_cell_csv"]).strip())
         if not csv_path.exists():
             raise FileNotFoundError(
@@ -970,6 +984,13 @@ print("=" * 60)
 print("Stage Heterogeneity Analysis")
 print("GEM diffusion variability across developmental stages")
 print("=" * 60 + "\n")
+
+# ------------------------------------------------------------------
+# 0. Initialise stage config from manifest (must happen before anything
+#    that references STAGE_ORDER / STAGE_LABELS / STAGE_COLOURS)
+# ------------------------------------------------------------------
+_init_stage_config(MANIFEST_CSV)
+print(f"  Stage order (from manifest): {' → '.join(STAGE_ORDER)}\n")
 
 # ------------------------------------------------------------------
 # 1. Load data
