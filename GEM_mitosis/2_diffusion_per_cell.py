@@ -54,14 +54,41 @@ def _ask_folder(prompt, default=None):
             return p
         print(f"  Not found: '{raw}'  —  please try again.")
 
+import subprocess
+
 print("=" * 60)
 print("Step 2 — Diffusion per cell")
 print("=" * 60)
 WORK_DIR = _ask_folder(
-    "Folder containing cell_trajectories.pkl",
+    "Folder containing cell_trajectories.pkl  (or megafolder with embryo subfolders)",
     default=str(SCRIPT_DIR),
 )
 print(f"  Working folder: {WORK_DIR}\n")
+
+# ---------------------------------------------------------------------------
+# Megafolder mode: if cell_trajectories.pkl is not directly here, look for
+# subfolders (one per embryo) that each contain it and process them all.
+# ---------------------------------------------------------------------------
+if not (WORK_DIR / "cell_trajectories.pkl").exists():
+    _subdirs = sorted(d for d in WORK_DIR.iterdir()
+                      if d.is_dir() and (d / "cell_trajectories.pkl").exists())
+    if _subdirs:
+        print(f"  Megafolder mode — found {len(_subdirs)} embryo subfolder(s):")
+        for _d in _subdirs:
+            print(f"    {_d.name}")
+        _resp = input("\n  Process all? [Y/n]: ").strip().lower()
+        if _resp not in ("", "y", "yes"):
+            print("  Aborted.")
+            sys.exit(0)
+        for _d in _subdirs:
+            print(f"\n{'='*60}\n  Processing: {_d.name}\n{'='*60}")
+            subprocess.run([sys.executable, str(Path(__file__).resolve()), str(_d)],
+                           check=False)
+        print("\nStep 2 — Megafolder batch complete.")
+        sys.exit(0)
+    print(f"  ERROR: cell_trajectories.pkl not found in {WORK_DIR}")
+    print("  Run Step 1 (1_cell_trajectory_classifier.py) first.")
+    sys.exit(1)
 
 IN_PKL  = WORK_DIR / "cell_trajectories.pkl"
 
