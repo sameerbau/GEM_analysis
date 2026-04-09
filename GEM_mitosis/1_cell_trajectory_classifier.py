@@ -101,16 +101,23 @@ def find_embryo_sets(folder: Path) -> list[dict]:
                 membrane = candidate
                 break
 
-        # Trajectory CSV: Traj_*.csv files that contain the embryo key
+        # Trajectory CSV: primary = TrackMate Traj_*.csv containing the embryo key
         traj_candidates = sorted(folder.glob("Traj_*.csv"))
         traj_match = None
         for tc in traj_candidates:
             if key in tc.name:
                 traj_match = tc
                 break
-        # Fallback: first Traj CSV in folder if only one exists
         if traj_match is None and len(traj_candidates) == 1:
             traj_match = traj_candidates[0]
+        # Fallback: any CSV in the folder whose name starts with the embryo key
+        if traj_match is None:
+            _SKIP = {"diffusion_per_cell.csv", "diffusion_per_traj.csv",
+                     "cell_classification.csv", "cell_trajectory_summary.csv"}
+            for tc in sorted(folder.glob(f"{key}*.csv")):
+                if tc.name not in _SKIP:
+                    traj_match = tc
+                    break
 
         # ROI zip (optional)
         roi_candidates = sorted(folder.glob(f"{key}*_rois.zip"))

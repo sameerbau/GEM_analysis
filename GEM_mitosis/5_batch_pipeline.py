@@ -98,6 +98,7 @@ def _find_in_folder(folder):
                 membrane = c
                 break
         traj = None
+        # Primary: TrackMate-style Traj_*.csv
         candidates = sorted(folder.glob("Traj_*.csv"))
         for tc in candidates:
             if key in tc.name:
@@ -105,6 +106,14 @@ def _find_in_folder(folder):
                 break
         if traj is None and len(candidates) == 1:
             traj = candidates[0]
+        # Fallback: any CSV in the folder whose name contains the embryo key
+        if traj is None:
+            _SKIP = {"diffusion_per_cell.csv", "diffusion_per_traj.csv",
+                     "cell_classification.csv", "cell_trajectory_summary.csv"}
+            for tc in sorted(folder.glob(f"{key}*.csv")):
+                if tc.name not in _SKIP:
+                    traj = tc
+                    break
         embryos.append({"label": key, "traj_csv": traj,
                          "mem_tif": membrane, "mask_png": f})
     return embryos
@@ -144,8 +153,7 @@ raw_out = input("  Output folder [Enter = same]: ").strip().strip("'\"")
 OUTPUT_FOLDER = Path(raw_out).expanduser().resolve() if raw_out else INPUT_FOLDER
 OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
-EXPERIMENTS_DIR = OUTPUT_FOLDER / "experiments"
-EXPERIMENTS_DIR.mkdir(exist_ok=True)
+EXPERIMENTS_DIR = OUTPUT_FOLDER   # per-embryo subfolders live directly in OUTPUT_FOLDER
 
 print(f"\n  Scanning: {INPUT_FOLDER}")
 EXPERIMENTS = find_all_embryos(INPUT_FOLDER)
