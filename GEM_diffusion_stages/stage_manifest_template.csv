@@ -1,0 +1,9 @@
+stage,experiment_label,diffusion_per_cell_csv
+syncytial,exp_sync_01,/path/to/sync_01/diffusion_per_cell.csv
+syncytial,exp_sync_02,/path/to/sync_02/diffusion_per_cell.csv
+cellularization,exp_cell_01,/path/to/cell_01/diffusion_per_cell.csv
+cellularization,exp_cell_02,/path/to/cell_02/diffusion_per_cell.csv
+mzt,exp_mzt_01,/path/to/mzt_01/diffusion_per_cell.csv
+mzt,exp_mzt_02,/path/to/mzt_02/diffusion_per_cell.csv
+gastrulation,exp_gast_01,/path/to/gast_01/diffusion_per_cell.csv
+gastrulation,exp_gast_02,/path/to/gast_02/diffusion_per_cell.csv

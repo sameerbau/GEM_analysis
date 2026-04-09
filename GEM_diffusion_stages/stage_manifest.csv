@@ -1,0 +1,5 @@
+stage,experiment_label,diffusion_per_cell_csv
+syncytial,set1_3em_001,/home/user/GEM_analysis/GEM_mitosis/experiments/set1_3em_001/diffusion_per_cell.csv
+cellularization,set1_3em_002,/home/user/GEM_analysis/GEM_mitosis/experiments/set1_3em_002/diffusion_per_cell.csv
+mzt,set1_3em_003,/home/user/GEM_analysis/GEM_mitosis/experiments/set1_3em_003/diffusion_per_cell.csv
+gastrulation,set1_3em_004,/home/user/GEM_analysis/GEM_mitosis/experiments/set1_3em_004/diffusion_per_cell.csv

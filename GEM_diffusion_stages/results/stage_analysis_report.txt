@@ -1,0 +1,77 @@
+=================================================================
+Stage Heterogeneity Analysis Report
+GEM diffusion variability across developmental stages
+(following Hubatsch et al. 2023, Biophys J PMC10027447)
+=================================================================
+
+Dataset summary
+----------------------------------------
+  Total cells:       144
+  Total experiments: 4
+  Stages analysed:   syncytial, cellularization, mzt, gastrulation
+  Within-exp normalisation: True
+  Fold-range formula:       10^(5.0*sigma_log10D)
+
+Per-stage variability summary
+----------------------------------------
+  [Syncytial]  n_cells=40  n_exp=1
+    log10D mean  = -0.0041
+    log10D SD    = 0.3029  (95% CI: [0.2382, 0.3609])
+    CV (linear)  = 71.83%
+    Fold range   = 32.68x
+
+  [Cellularization]  n_cells=10  n_exp=1
+    log10D mean  = 0.1514
+    log10D SD    = 0.4684  (95% CI: [0.2117, 0.6283])
+    CV (linear)  = 140.63%
+    Fold range   = 219.83x
+
+  [MZT]  n_cells=39  n_exp=1
+    log10D mean  = 0.0094
+    log10D SD    = 0.2629  (95% CI: [0.2087, 0.3103])
+    CV (linear)  = 57.04%
+    Fold range   = 20.64x
+
+  [Gastrulation]  n_cells=55  n_exp=1
+    log10D mean  = -0.0049
+    log10D SD    = 0.2479  (95% CI: [0.1855, 0.3001])
+    CV (linear)  = 79.20%
+    Fold range   = 17.36x
+
+Variance homogeneity tests (overall)
+----------------------------------------
+  Levene (mean-centred)                   stat=2.6438  p=5.1651e-02  [ns]
+  Brown-Forsythe (median)                 stat=1.7174  p=1.6621e-01  [ns]
+  Bartlett (assumes normal)               stat=8.8711  p=3.1054e-02  [*]
+  Kruskal-Wallis                          stat=1.2791  p=7.3411e-01  [ns]
+
+Monotonic trend test (Spearman)
+----------------------------------------
+  stage order vs log10D SD:  rho=-0.800  p=0.2000  [ns]
+  stage order vs CV:         rho=0.000  p=1.0000  [ns]
+  Interpretation: no significant monotonic trend detected
+
+Pairwise Levene (Brown-Forsythe) tests
+----------------------------------------
+  Syncytial       vs Cellularization  F=1.002  p=3.2187e-01  [ns]  Cliff d=-0.175 (small)
+  Syncytial       vs MZT              F=0.251  p=6.1790e-01  [ns]  Cliff d=-0.038 (negligible)
+  Syncytial       vs Gastrulation     F=2.087  p=1.5191e-01  [ns]  Cliff d=0.028 (negligible)
+  Cellularization vs MZT              F=1.899  p=1.7475e-01  [ns]  Cliff d=0.185 (small)
+  Cellularization vs Gastrulation     F=3.588  p=6.2803e-02  [ns]  Cliff d=0.193 (small)
+  MZT             vs Gastrulation     F=1.050  p=3.0816e-01  [ns]  Cliff d=0.077 (negligible)
+
+Nested ANOVA decomposition (stage -> experiment -> cell)
+----------------------------------------
+  N=144 cells  |  4 experiments  |  4 stages
+  Grand mean log10D = 0.0101
+
+  Between-stage                                  SS=0.2202  eta2=0.0188  (1.9%)
+  Between-experiment (within stage)              SS=0.0000  eta2=0.0000  (0.0%)
+  Between-cell (within experiment)               SS=11.4987  eta2=0.9812  (98.1%)
+
+  NOTE: Within-cell (track-to-track) variance is not recomputed
+  here; it is already folded into each cell's D_median estimate.
+  See GEM_mitosis/7_variance_decomposition.py for within-cell
+  decomposition (~79% in Hubatsch et al. 2023).
+
+=================================================================
