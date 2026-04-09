@@ -29,6 +29,7 @@ Usage:
   python 7_variance_decomposition.py
 """
 
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -40,9 +41,43 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 SCRIPT_DIR  = Path(__file__).parent
-EXP_DIR     = SCRIPT_DIR / "experiments"
-OUTPUT_DIR  = SCRIPT_DIR / "pooled_results_v2"
+
+def _ask_folder(prompt, default=None):
+    """Prompt for a folder. Accepts sys.argv[1] if provided."""
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_dir():
+        p = Path(sys.argv[1]).expanduser().resolve()
+        print(f"  Using folder from command line: {p}")
+        return p
+    while True:
+        hint = f"  [Enter = {default}]" if default else ""
+        raw = input(f"\n  {prompt}{hint}: ").strip().strip("'\"")
+        if not raw and default:
+            return Path(default).expanduser().resolve()
+        p = Path(raw).expanduser().resolve()
+        if p.is_dir():
+            return p
+        print(f"  Not found: '{raw}'  —  please try again.")
+
+print("=" * 60)
+print("Step 7 — Variance decomposition")
+print("=" * 60)
+_default_pooled = str(SCRIPT_DIR / "pooled_results_v2")
+OUTPUT_DIR = _ask_folder(
+    "Folder containing pooled_cells.csv  (pooled_results_v2/)",
+    default=_default_pooled,
+)
+print(f"  Pooled results folder: {OUTPUT_DIR}\n")
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Experiments folder: auto-detected as <pooled_dir>/../experiments or prompted
+_default_exp = str(OUTPUT_DIR.parent / "experiments")
+if Path(_default_exp).is_dir():
+    EXP_DIR = Path(_default_exp)
+else:
+    EXP_DIR = _ask_folder(
+        "Folder containing per-experiment subfolders (experiments/)",
+        default=_default_exp,
+    )
 
 COLOURS = {"mitotic": "#e64b35", "interphase": "#4dbbd5", "all": "#7e6ebf"}
 
@@ -64,13 +99,16 @@ pooled["_key"] = pooled["experiment"] + "_" + pooled["cell_label"].astype(str)
 cell_meta = pooled.set_index("_key")[["cell_type","circularity","area_px","n_valid_traj"]]
 
 # Map experiment label → path to diffusion_per_traj.csv
-traj_files = {
-    "set1_3em_001": SCRIPT_DIR / "diffusion_per_traj.csv",   # from original Step 2
-}
-for sub in sorted(EXP_DIR.iterdir()):
-    f = sub / "diffusion_per_traj.csv"
-    if f.exists() and sub.name != "set1_3em_001":
-        traj_files[sub.name] = f
+# Scan all subfolders of EXP_DIR for diffusion_per_traj.csv
+traj_files = {}
+if EXP_DIR.is_dir():
+    for sub in sorted(EXP_DIR.iterdir()):
+        f = sub / "diffusion_per_traj.csv"
+        if f.exists():
+            traj_files[sub.name] = f
+if not traj_files:
+    print(f"  WARNING: no diffusion_per_traj.csv files found under {EXP_DIR}")
+    print("  Run 5_batch_pipeline.py first to generate per-experiment outputs.")
 
 frames = []
 for exp, fpath in traj_files.items():

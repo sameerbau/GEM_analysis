@@ -2,15 +2,29 @@
 """
 5_batch_pipeline.py
 
-Batch pipeline for mitosis GEM analysis across 4 experiments.
+Batch pipeline for mitosis GEM analysis — FOLDER / MEGA-FOLDER MODE.
 
-- set1_3em_001: copies existing diffusion_per_cell.csv / cell_classification.csv
-- sets 002, 003, 004: runs the full step 1-3 pipeline logic
-- All 4: pooled analysis saved to pooled_results_v2/
+Prompts for an input folder and auto-discovers all embryo file sets.
+Supports two layouts:
+
+  Flat folder (all embryo files in one directory):
+    /data/experiment/
+      Em001_cp_masks.png   Em001.tif   Traj_Em001.csv
+      Em002_cp_masks.png   Em002.tif   Traj_Em002.csv
+
+  Mega-folder with subfolders (one subfolder per embryo or per stage):
+    /data/all_experiments/
+      Em001/  Em001_cp_masks.png  Em001.tif  Traj_Em001.csv
+      Em002/  ...
+
+In both cases the script:
+  - Runs Steps 1-3 (classify → diffusion → cell-type) for every embryo
+  - Saves per-embryo outputs to  <output_dir>/experiments/<embryo_name>/
+  - Pools all results and saves to  <output_dir>/pooled_results/
 """
 
+import sys
 import os
-import shutil
 import pickle
 import numpy as np
 import pandas as pd
@@ -31,51 +45,129 @@ from sklearn.mixture import GaussianMixture
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent
 
-DT                   = 0.1      # seconds per frame
-PIXEL_TO_MICRON      = 0.094    # µm / pixel
-MIN_TRAJ_LENGTH      = 10       # minimum frames per trajectory
-MIN_TRAJ_PER_CELL    = 5        # minimum valid trajectories per cell
-CELL_AREA_PERCENTILE = 10       # drop cells below this area percentile
-MSD_FIT_FRACTION     = 0.8      # fraction of trajectory length used for MSD lags
-MAX_POINTS_FOR_FIT   = 11       # cap on number of MSD points used in fit
-CIRCULARITY_THRESHOLD = 0.70    # mitotic = circularity >= threshold
+DT                    = 0.1      # seconds per frame
+PIXEL_TO_MICRON       = 0.094    # µm / pixel
+MIN_TRAJ_LENGTH       = 10       # minimum frames per trajectory
+MIN_TRAJ_PER_CELL     = 5        # minimum valid trajectories per cell
+CELL_AREA_PERCENTILE  = 10       # drop cells below this area percentile
+MSD_FIT_FRACTION      = 0.8      # fraction of trajectory length used for MSD lags
+MAX_POINTS_FOR_FIT    = 11       # cap on number of MSD points used in fit
+CIRCULARITY_THRESHOLD = 0.70     # mitotic = circularity >= threshold
+
+MASK_SUFFIXES = ["_cp_masks.png", "_cp_masks.tif", "_cp_masks.tiff",
+                 "_masks.png",    "_masks.tif"]
 
 # ---------------------------------------------------------------------------
-# Experiment definitions
+# Folder prompt + embryo auto-discovery
 # ---------------------------------------------------------------------------
-EXPERIMENTS = [
-    {
-        "label":    "set1_3em_001",
-        "traj_csv": SCRIPT_DIR / "Traj_set1_3em_001_crop.tif.csv",
-        "mem_tif":  SCRIPT_DIR / "set1_3em_001.nd2membrane image.tif",
-        "mask_png": SCRIPT_DIR / "set1_3em_001.nd2membrane image_cp_masks.png",
-        "precomputed": True,   # copy existing outputs, skip processing
-    },
-    {
-        "label":    "set1_3em_002",
-        "traj_csv": SCRIPT_DIR / "Traj_set1_3em_002_crop.csv",
-        "mem_tif":  SCRIPT_DIR / "set1_3em_002.nd2membrane image.tif",
-        "mask_png": SCRIPT_DIR / "set1_3em_002.nd2membrane image_cp_masks.png",
-        "precomputed": False,
-    },
-    {
-        "label":    "set1_3em_003",
-        "traj_csv": SCRIPT_DIR / "Traj_set1_3em_003_crop.csv",
-        "mem_tif":  SCRIPT_DIR / "set1_3em_003.nd2membrane image.tif",
-        "mask_png": SCRIPT_DIR / "set1_3em_003.nd2membrane image_cp_masks.png",
-        "precomputed": False,
-    },
-    {
-        "label":    "set1_3em_004",
-        "traj_csv": SCRIPT_DIR / "Traj_set1_3em_004_crop.csv",
-        "mem_tif":  SCRIPT_DIR / "set1_3em_004.nd2membrane image.tif",
-        "mask_png": SCRIPT_DIR / "set1_3em_004.nd2membrane image_cp_masks.png",
-        "precomputed": False,
-    },
-]
 
-EXPERIMENTS_DIR = SCRIPT_DIR / "experiments"
+def _ask_folder(prompt, default=None):
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_dir():
+        p = Path(sys.argv[1]).expanduser().resolve()
+        print(f"  Using folder from command line: {p}")
+        return p
+    while True:
+        hint = f"  [Enter = {default}]" if default else ""
+        raw = input(f"\n  {prompt}{hint}: ").strip().strip("'\"")
+        if not raw and default:
+            return Path(default).expanduser().resolve()
+        p = Path(raw).expanduser().resolve()
+        if p.is_dir():
+            return p
+        print(f"  Not found: '{raw}'  —  please try again.")
+
+
+def _strip_mask_suffix(name):
+    for sfx in MASK_SUFFIXES:
+        if name.endswith(sfx):
+            return name[: -len(sfx)]
+    return None
+
+
+def _find_in_folder(folder):
+    embryos = []
+    for f in sorted(folder.iterdir()):
+        base = _strip_mask_suffix(f.name)
+        if base is None:
+            continue
+        key = base.split(".")[0]
+        membrane = None
+        for ext in [".tif", ".tiff"]:
+            c = folder / (base + ext)
+            if c.exists():
+                membrane = c
+                break
+        traj = None
+        candidates = sorted(folder.glob("Traj_*.csv"))
+        for tc in candidates:
+            if key in tc.name:
+                traj = tc
+                break
+        if traj is None and len(candidates) == 1:
+            traj = candidates[0]
+        embryos.append({"label": key, "traj_csv": traj,
+                         "mem_tif": membrane, "mask_png": f})
+    return embryos
+
+
+def find_all_embryos(root):
+    """Auto-discover embryos in root (flat) and immediate subfolders (mega-folder)."""
+    embryos = _find_in_folder(root)
+    seen_labels = {em["label"] for em in embryos}
+    for sub in sorted(root.iterdir()):
+        if sub.is_dir():
+            for em in _find_in_folder(sub):
+                if em["label"] in seen_labels:
+                    em["label"] = f"{sub.name}_{em['label']}"
+                embryos.append(em)
+                seen_labels.add(em["label"])
+    return embryos
+
+
+# ---------------------------------------------------------------------------
+# Prompt user and discover experiments
+# ---------------------------------------------------------------------------
+print("=" * 60)
+print("Step 5 — Batch pipeline  (folder / mega-folder mode)")
+print("=" * 60)
+print()
+print("  Accepts a flat folder (all embryo files together) OR")
+print("  a mega-folder whose subfolders each contain embryo files.")
+print()
+
+INPUT_FOLDER = _ask_folder("Input folder (embryo files or subfolders)")
+
+print()
+print(f"  Output folder for experiments/ and pooled_results/")
+print(f"  Press Enter to use: {INPUT_FOLDER}")
+raw_out = input("  Output folder [Enter = same]: ").strip().strip("'\"")
+OUTPUT_FOLDER = Path(raw_out).expanduser().resolve() if raw_out else INPUT_FOLDER
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+EXPERIMENTS_DIR = OUTPUT_FOLDER / "experiments"
 EXPERIMENTS_DIR.mkdir(exist_ok=True)
+
+print(f"\n  Scanning: {INPUT_FOLDER}")
+EXPERIMENTS = find_all_embryos(INPUT_FOLDER)
+
+if not EXPERIMENTS:
+    print("\n  No Cellpose mask files found. Check your input folder.")
+    sys.exit(1)
+
+print(f"\n  Found {len(EXPERIMENTS)} embryo(s):\n")
+print(f"  {'Label':<25}  {'Mask':^5}  {'Membrane':^8}  {'Traj CSV':^8}")
+print("  " + "-" * 55)
+for em in EXPERIMENTS:
+    print(f"  {em['label']:<25}  OK     "
+          f"  {'OK' if em['mem_tif'] else 'MISS':^8}  "
+          f"  {'OK' if em['traj_csv'] else 'MISS':^8}")
+print()
+
+resp = input("  Proceed? [Y/n]: ").strip().lower()
+if resp not in ("", "y", "yes"):
+    print("  Aborted.")
+    sys.exit(0)
+
 
 # ---------------------------------------------------------------------------
 # MSD / diffusion helpers
@@ -340,6 +432,7 @@ def run_step3(df_filtered, out_dir):
 # ---------------------------------------------------------------------------
 
 exp_subdirs = {}
+step_results = []
 
 for exp in EXPERIMENTS:
     label   = exp["label"]
@@ -351,27 +444,35 @@ for exp in EXPERIMENTS:
     print(f"Processing experiment: {label}")
     print(f"  Output dir: {out_dir}")
 
-    if exp["precomputed"]:
-        # Copy existing outputs from the root directory
-        src_diff  = SCRIPT_DIR / "diffusion_per_cell.csv"
-        src_class = SCRIPT_DIR / "cell_classification.csv"
-        shutil.copy2(src_diff,  out_dir / "diffusion_per_cell.csv")
-        shutil.copy2(src_class, out_dir / "cell_classification.csv")
-        print(f"  [set1_3em_001] Copied existing diffusion_per_cell.csv and cell_classification.csv")
-    else:
+    if exp["traj_csv"] is None:
+        print(f"  SKIPPED — no trajectory CSV found for {label}")
+        step_results.append((label, "SKIPPED"))
+        continue
+    if exp["mem_tif"] is None:
+        print(f"  WARNING — no membrane TIF found; mask will be used for display")
+
+    try:
         classified_data = run_step1(exp, out_dir)
         df_filtered, df_valid = run_step2(classified_data, out_dir)
         run_step3(df_filtered, out_dir)
+        step_results.append((label, "OK"))
+    except Exception as exc:
+        print(f"  ERROR processing {label}: {exc}")
+        import traceback; traceback.print_exc()
+        step_results.append((label, "ERROR"))
 
 print(f"\n{'='*60}")
-print("All experiments processed. Running pooled analysis (Step 4)...")
+print("All experiments processed:")
+for lbl, status in step_results:
+    print(f"  {lbl:<30}  {status}")
+print(f"\nRunning pooled analysis ...")
 
 
 # ---------------------------------------------------------------------------
 # Step 4: pooled analysis
 # ---------------------------------------------------------------------------
 
-OUTPUT_DIR = SCRIPT_DIR / "pooled_results_v2"
+OUTPUT_DIR = OUTPUT_FOLDER / "pooled_results"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 colours     = {"mitotic": "#e64b35", "interphase": "#4dbbd5"}
