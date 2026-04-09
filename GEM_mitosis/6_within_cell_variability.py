@@ -24,6 +24,7 @@ Usage:
   python 6_within_cell_variability.py
 """
 
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -35,8 +36,33 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent
-INPUT_CSV  = SCRIPT_DIR / "pooled_results_v2" / "pooled_cells.csv"
-OUTPUT_DIR = SCRIPT_DIR / "pooled_results_v2"
+
+def _ask_folder(prompt, default=None):
+    """Prompt for a folder. Accepts sys.argv[1] if provided."""
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_dir():
+        p = Path(sys.argv[1]).expanduser().resolve()
+        print(f"  Using folder from command line: {p}")
+        return p
+    while True:
+        hint = f"  [Enter = {default}]" if default else ""
+        raw = input(f"\n  {prompt}{hint}: ").strip().strip("'\"")
+        if not raw and default:
+            return Path(default).expanduser().resolve()
+        p = Path(raw).expanduser().resolve()
+        if p.is_dir():
+            return p
+        print(f"  Not found: '{raw}'  —  please try again.")
+
+print("=" * 60)
+print("Step 6 — Within-cell variability analysis")
+print("=" * 60)
+_default_pooled = str(SCRIPT_DIR / "pooled_results_v2")
+OUTPUT_DIR = _ask_folder(
+    "Folder containing pooled_cells.csv  (pooled_results_v2/)",
+    default=_default_pooled,
+)
+print(f"  Pooled results folder: {OUTPUT_DIR}\n")
+INPUT_CSV  = OUTPUT_DIR / "pooled_cells.csv"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Colours

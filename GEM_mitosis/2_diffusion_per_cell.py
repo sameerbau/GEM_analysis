@@ -24,6 +24,7 @@ Usage:
   python 2_diffusion_per_cell.py
 """
 
+import sys
 import pickle
 import numpy as np
 import pandas as pd
@@ -37,7 +38,32 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent
 
-IN_PKL  = SCRIPT_DIR / "cell_trajectories.pkl"
+def _ask_folder(prompt, default=None):
+    """Prompt for a folder. Accepts sys.argv[1] if provided."""
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_dir():
+        p = Path(sys.argv[1]).expanduser().resolve()
+        print(f"  Using folder from command line: {p}")
+        return p
+    while True:
+        hint = f"  [Enter = {default}]" if default else ""
+        raw = input(f"\n  {prompt}{hint}: ").strip().strip("'\"")
+        if not raw and default:
+            return Path(default).expanduser().resolve()
+        p = Path(raw).expanduser().resolve()
+        if p.is_dir():
+            return p
+        print(f"  Not found: '{raw}'  —  please try again.")
+
+print("=" * 60)
+print("Step 2 — Diffusion per cell")
+print("=" * 60)
+WORK_DIR = _ask_folder(
+    "Folder containing cell_trajectories.pkl",
+    default=str(SCRIPT_DIR),
+)
+print(f"  Working folder: {WORK_DIR}\n")
+
+IN_PKL  = WORK_DIR / "cell_trajectories.pkl"
 
 # Physics / acquisition
 DT               = 0.1       # seconds per frame
@@ -57,11 +83,11 @@ MAX_POINTS_FOR_FIT = 11
 MSD_FIT_FRACTION   = 0.8     # use first 80% of trajectory length for MSD lags
 
 # Output files
-OUT_CSV_CELL  = SCRIPT_DIR / "diffusion_per_cell.csv"
-OUT_CSV_TRAJ  = SCRIPT_DIR / "diffusion_per_traj.csv"
-OUT_PKL       = SCRIPT_DIR / "diffusion_per_cell.pkl"
-OUT_FIG_QC    = SCRIPT_DIR / "diffusion_qc.png"
-OUT_FIG_MAIN  = SCRIPT_DIR / "diffusion_per_cell.png"
+OUT_CSV_CELL  = WORK_DIR / "diffusion_per_cell.csv"
+OUT_CSV_TRAJ  = WORK_DIR / "diffusion_per_traj.csv"
+OUT_PKL       = WORK_DIR / "diffusion_per_cell.pkl"
+OUT_FIG_QC    = WORK_DIR / "diffusion_qc.png"
+OUT_FIG_MAIN  = WORK_DIR / "diffusion_per_cell.png"
 
 # ---------------------------------------------------------------------------
 # MSD / diffusion helpers  (adapted from 2diffusion_analyzer.py)

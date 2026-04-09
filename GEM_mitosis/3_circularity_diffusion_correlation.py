@@ -30,6 +30,7 @@ Usage:
   python 3_circularity_diffusion_correlation.py
 """
 
+import sys
 import pickle
 import numpy as np
 import pandas as pd
@@ -43,7 +44,33 @@ from pathlib import Path
 # Configuration
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent
-IN_PKL     = SCRIPT_DIR / "diffusion_per_cell.pkl"
+
+def _ask_folder(prompt, default=None):
+    """Prompt for a folder. Accepts sys.argv[1] if provided."""
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_dir():
+        p = Path(sys.argv[1]).expanduser().resolve()
+        print(f"  Using folder from command line: {p}")
+        return p
+    while True:
+        hint = f"  [Enter = {default}]" if default else ""
+        raw = input(f"\n  {prompt}{hint}: ").strip().strip("'\"")
+        if not raw and default:
+            return Path(default).expanduser().resolve()
+        p = Path(raw).expanduser().resolve()
+        if p.is_dir():
+            return p
+        print(f"  Not found: '{raw}'  —  please try again.")
+
+print("=" * 60)
+print("Step 3 — Circularity / diffusion correlation")
+print("=" * 60)
+WORK_DIR = _ask_folder(
+    "Folder containing diffusion_per_cell.pkl",
+    default=str(SCRIPT_DIR),
+)
+print(f"  Working folder: {WORK_DIR}\n")
+
+IN_PKL     = WORK_DIR / "diffusion_per_cell.pkl"
 
 # Set a fixed circularity threshold to override GMM (e.g. 0.72), or None to use GMM.
 MANUAL_CIRCULARITY_THRESHOLD = 0.70
@@ -56,11 +83,11 @@ MIN_TRAJ_FOR_COMPARISON = 5
 MIN_TRAJ_MITOTIC = 5
 
 # Output files
-OUT_CSV       = SCRIPT_DIR / "cell_classification.csv"
-OUT_FIG_CORR  = SCRIPT_DIR / "correlation_diffusion.png"
-OUT_FIG_COMP  = SCRIPT_DIR / "mitotic_vs_interphase.png"
-OUT_FIG_MIT   = SCRIPT_DIR / "mitotic_cell_comparison.png"
-OUT_STATS_TXT = SCRIPT_DIR / "step3_stats.txt"
+OUT_CSV       = WORK_DIR / "cell_classification.csv"
+OUT_FIG_CORR  = WORK_DIR / "correlation_diffusion.png"
+OUT_FIG_COMP  = WORK_DIR / "mitotic_vs_interphase.png"
+OUT_FIG_MIT   = WORK_DIR / "mitotic_cell_comparison.png"
+OUT_STATS_TXT = WORK_DIR / "step3_stats.txt"
 
 # ---------------------------------------------------------------------------
 # Load data
