@@ -137,18 +137,17 @@ def extract_data_from_files(file_paths):
 def shorten_filename(name, max_length=20):
     """
     Shorten a filename for better readability in plots.
-    
-    Args:
-        name: Filename to shorten
-        max_length: Maximum length after shortening
-        
-    Returns:
-        Shortened filename
+    Extracts the embryo identifier from the standard pipeline naming convention
+    (e.g. 'tracked_Traj_Em6.nd2_crop' -> 'Em6').
+    Falls back to middle-truncation for non-standard names.
     """
+    import re
+    # Extract identifier between 'Traj_' and '.nd2' (handles Em6, Em002, etc.)
+    m = re.search(r'Traj_(.+?)\.nd2', name)
+    if m:
+        return m.group(1)
     if len(name) <= max_length:
         return name
-    
-    # Keep start and end, replace middle with "..."
     half_length = (max_length - 3) // 2
     return name[:half_length] + "..." + name[-half_length:]
 
