@@ -21,10 +21,12 @@ python roi_diffusion_analyzer_v2.py
 
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
 from datetime import datetime
+from scipy import stats
 
 # Global parameters
 # =====================================
@@ -191,6 +193,38 @@ def plot_diffusion_boxplot(inside_D, outside_D, output_path):
     
     print(f"Diffusion box plot saved to {output_path}")
 
+def save_results_to_csv(inside_D, outside_D, output_dir):
+    """Save diffusion summary statistics and raw values to CSV files."""
+    # Raw values
+    max_len = max(len(inside_D), len(outside_D))
+    inside_padded = np.pad(inside_D.astype(float), (0, max_len - len(inside_D)), constant_values=np.nan)
+    outside_padded = np.pad(outside_D.astype(float), (0, max_len - len(outside_D)), constant_values=np.nan)
+    pd.DataFrame({'Inside_ROIs_D': inside_padded, 'Outside_ROIs_D': outside_padded}).to_csv(
+        os.path.join(output_dir, 'raw_diffusion_values.csv'), index=False)
+
+    # Summary statistics with statistical test
+    u_stat, p_mw = stats.mannwhitneyu(inside_D, outside_D, alternative='two-sided')
+    ks_stat, p_ks = stats.ks_2samp(inside_D, outside_D)
+
+    rows = []
+    for label, data in [('Inside_ROIs', inside_D), ('Outside_ROIs', outside_D)]:
+        rows.append({
+            'Location': label, 'N': len(data),
+            'Mean': np.mean(data), 'Median': np.median(data),
+            'Std': np.std(data), 'SEM': np.std(data) / np.sqrt(len(data)),
+            'Min': np.min(data), 'Max': np.max(data),
+            'Q25': np.percentile(data, 25), 'Q75': np.percentile(data, 75),
+        })
+    pd.DataFrame(rows).to_csv(os.path.join(output_dir, 'diffusion_summary.csv'), index=False)
+
+    pd.DataFrame([
+        {'Test': 'Mann-Whitney U', 'Statistic': u_stat, 'P_value': p_mw, 'Significant': p_mw < 0.05},
+        {'Test': 'Kolmogorov-Smirnov', 'Statistic': ks_stat, 'P_value': p_ks, 'Significant': p_ks < 0.05},
+    ]).to_csv(os.path.join(output_dir, 'statistical_tests.csv'), index=False)
+
+    print(f"CSV files saved to {output_dir}")
+
+
 def print_diffusion_summary(inside_D, outside_D):
     """
     Print summary statistics for diffusion coefficients inside and outside ROIs.
@@ -253,7 +287,10 @@ def main():
     
     # Plot box plot
     plot_diffusion_boxplot(inside_D, outside_D, os.path.join(output_dir, 'diffusion_boxplot.png'))
-    
+
+    # Save CSV files
+    save_results_to_csv(inside_D, outside_D, output_dir)
+
     print(f"\nAnalysis results saved to {output_dir}")
 
 if __name__ == "__main__":

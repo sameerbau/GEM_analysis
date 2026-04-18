@@ -30,6 +30,7 @@ python 3 alpha_inside_outside.py
 
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
@@ -455,6 +456,46 @@ def plot_alpha_violin(inside_alpha, outside_alpha, output_path):
     print(f"Violin plot saved to {output_path}")
 
 
+def save_alpha_to_csv(inside_alpha, outside_alpha, stats_results, output_dir):
+    """Save alpha values and statistics to CSV files."""
+    # Raw alpha values
+    max_len = max(len(inside_alpha), len(outside_alpha))
+    inside_padded = np.pad(inside_alpha.astype(float), (0, max_len - len(inside_alpha)), constant_values=np.nan)
+    outside_padded = np.pad(outside_alpha.astype(float), (0, max_len - len(outside_alpha)), constant_values=np.nan)
+    pd.DataFrame({'Inside_ROIs_alpha': inside_padded, 'Outside_ROIs_alpha': outside_padded}).to_csv(
+        os.path.join(output_dir, 'alpha_raw_values.csv'), index=False)
+
+    # Summary statistics
+    rows = []
+    for label, data in [('Inside_ROIs', inside_alpha), ('Outside_ROIs', outside_alpha)]:
+        if len(data) == 0:
+            continue
+        sub = sum(1 for a in data if a < 0.9)
+        norm = sum(1 for a in data if 0.9 <= a <= 1.1)
+        sup = sum(1 for a in data if a > 1.1)
+        rows.append({
+            'Location': label, 'N': len(data),
+            'Mean': np.mean(data), 'Median': np.median(data),
+            'Std': np.std(data), 'SEM': np.std(data) / np.sqrt(len(data)),
+            'Min': np.min(data), 'Max': np.max(data),
+            'Q25': np.percentile(data, 25), 'Q75': np.percentile(data, 75),
+            'N_subdiffusion': sub, 'N_normal': norm, 'N_superdiffusion': sup,
+        })
+    pd.DataFrame(rows).to_csv(os.path.join(output_dir, 'alpha_summary.csv'), index=False)
+
+    # Statistical tests
+    pd.DataFrame([
+        {'Test': 'Mann-Whitney U', 'Statistic': stats_results.get('mann_whitney_u', np.nan),
+         'P_value': stats_results.get('p_value', np.nan), 'Significant': stats_results.get('significant', False)},
+        {'Test': 'Kolmogorov-Smirnov', 'Statistic': stats_results.get('ks_statistic', np.nan),
+         'P_value': stats_results.get('ks_p_value', np.nan), 'Significant': stats_results.get('ks_p_value', 1) < 0.05},
+        {'Test': "Cliff's Delta", 'Statistic': stats_results.get('cliffs_delta', np.nan),
+         'P_value': '', 'Significant': ''},
+    ]).to_csv(os.path.join(output_dir, 'alpha_statistics.csv'), index=False)
+
+    print(f"CSV files saved to {output_dir}")
+
+
 def print_alpha_summary(inside_alpha, outside_alpha, stats_results):
     """
     Print summary statistics for alpha exponents.
@@ -612,6 +653,9 @@ def main():
                          os.path.join(output_dir, 'alpha_violin.png'))
     else:
         print("Skipping plots - need data in both inside and outside ROIs")
+
+    # Save CSV files
+    save_alpha_to_csv(inside_alpha, outside_alpha, stats_results, output_dir)
 
     print(f"\nAll results saved to: {output_dir}")
     print("="*70)
