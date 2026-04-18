@@ -28,9 +28,11 @@ python diffusion_coeff_pooled.py
 
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 import glob
+from scipy import stats
 
 # Global parameters
 # =====================================
@@ -225,6 +227,38 @@ def plot_diffusion_boxplot(inside_D, outside_D, output_path):
     print(f"Box plot saved to {output_path}")
 
 
+def save_results_to_csv(inside_D, outside_D, output_dir):
+    """Save pooled diffusion summary statistics and raw values to CSV files."""
+    # Raw values
+    max_len = max(len(inside_D), len(outside_D))
+    inside_padded = np.pad(inside_D.astype(float), (0, max_len - len(inside_D)), constant_values=np.nan)
+    outside_padded = np.pad(outside_D.astype(float), (0, max_len - len(outside_D)), constant_values=np.nan)
+    pd.DataFrame({'Inside_ROIs_D': inside_padded, 'Outside_ROIs_D': outside_padded}).to_csv(
+        os.path.join(output_dir, 'pooled_diffusion_raw_values.csv'), index=False)
+
+    # Summary statistics
+    rows = []
+    for label, data in [('Inside_ROIs', inside_D), ('Outside_ROIs', outside_D)]:
+        rows.append({
+            'Location': label, 'N': len(data),
+            'Mean': np.mean(data), 'Median': np.median(data),
+            'Std': np.std(data), 'SEM': np.std(data) / np.sqrt(len(data)),
+            'Min': np.min(data), 'Max': np.max(data),
+            'Q25': np.percentile(data, 25), 'Q75': np.percentile(data, 75),
+        })
+    pd.DataFrame(rows).to_csv(os.path.join(output_dir, 'pooled_diffusion_summary.csv'), index=False)
+
+    # Statistical tests
+    u_stat, p_mw = stats.mannwhitneyu(inside_D, outside_D, alternative='two-sided')
+    ks_stat, p_ks = stats.ks_2samp(inside_D, outside_D)
+    pd.DataFrame([
+        {'Test': 'Mann-Whitney U', 'Statistic': u_stat, 'P_value': p_mw, 'Significant': p_mw < 0.05},
+        {'Test': 'Kolmogorov-Smirnov', 'Statistic': ks_stat, 'P_value': p_ks, 'Significant': p_ks < 0.05},
+    ]).to_csv(os.path.join(output_dir, 'pooled_diffusion_stats.csv'), index=False)
+
+    print(f"CSV files saved to {output_dir}")
+
+
 def print_diffusion_summary(inside_D, outside_D):
     """
     Print summary statistics for pooled diffusion coefficients.
@@ -293,9 +327,12 @@ def main():
     plot_diffusion_distributions(inside_D, outside_D, 
                                 os.path.join(output_dir, 'pooled_diffusion_distributions.png'))
     
-    plot_diffusion_boxplot(inside_D, outside_D, 
+    plot_diffusion_boxplot(inside_D, outside_D,
                           os.path.join(output_dir, 'pooled_diffusion_boxplot.png'))
-    
+
+    # Save CSV files
+    save_results_to_csv(inside_D, outside_D, output_dir)
+
     print(f"\nAll results saved to: {output_dir}")
     print("="*50)
 
