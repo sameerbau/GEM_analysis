@@ -28,6 +28,8 @@ build/
 *.swo
 
 # Output directories (optional - uncomment if needed)
+GEM_mitosis
+GEM_diffusion_stages
 # processed_trajectories/
 # pipeline_integrated/
 # pipeline_batch_integrated/
