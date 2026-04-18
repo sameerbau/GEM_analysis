@@ -1,0 +1,4 @@
+Test,Statistic,P_value,Significant
+Mann-Whitney U,2384665.0,2.283214201288437e-06,True
+Kolmogorov-Smirnov,0.09131004144145814,2.5776530593031668e-05,True
+Cliffs Delta (effect size),0.10541381196517804,,
