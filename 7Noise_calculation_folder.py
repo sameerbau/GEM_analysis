@@ -91,7 +91,7 @@ def _partition_D(trajectories, partition_size, dt):
             try:
                 popt, _ = curve_fit(_linear_msd, tlag[:pts], msd[:pts],
                                     p0=[0.01, 0.0], maxfev=1000)
-                D = popt[0]   # curve_fit solves for D in 4*D*t+offset
+                D = popt[0] / 4  # match convention in 7Noise_calculation.py
                 D_values.append(D)
             except Exception:
                 pass
