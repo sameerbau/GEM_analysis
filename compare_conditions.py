@@ -81,6 +81,12 @@ GROUPS = [
      "#8B2500",
      "Gnu RNAi/Gnu RNAi Further Later Round2/diffusion_summary.csv",
      "Gnu RNAi/Gnu RNAi Further Later Round2/particle_counts_summary.csv"),
+
+    ("NC10",
+     "NC10",
+     "#D4380D",
+     "Nuclear cycles 10/diffusion_summary.csv",
+     "Nuclear cycles 10/particle_counts_summary.csv"),
 ]
 
 # Inside/outside ER-ROI pooled summaries (WT)
@@ -89,14 +95,21 @@ WT_ROI_ALPHA = "PB ER pooled_alpha_inside_outside_analysis/pooled_alpha_results_
 WT_ROI_DIFF_STATS  = "PB ER pooled_diffusion_analysis/pooled_diffusion_stats.csv"
 WT_ROI_ALPHA_STATS = "PB ER pooled_alpha_inside_outside_analysis/pooled_alpha_results_statistics.csv"
 
-# Gnu inside/outside ROI pooled summaries (currently: Later Round 1 only)
-# Format: list of (path_relative_to_base, short_label, colour_key)
-GNU_ROI_ENTRIES = [
+# Non-WT inside/outside ROI pooled summaries
+# Format: list of (diff_summary_path, diff_stats_path, display_label, colour_key)
+EXTRA_ROI_ENTRIES = [
     ("Gnu RNAi/Round 1 Lateronly pooled_diffusion_analysis/pooled_diffusion_summary.csv",
      "Gnu RNAi/Round 1 Lateronly pooled_diffusion_analysis/pooled_diffusion_stats.csv",
      "Gnu Later R1",
      "Gnu_Later_R1"),
+    ("Nuclear cycles 10/pooled_diffusion_analysis/pooled_diffusion_summary.csv",
+     "Nuclear cycles 10/pooled_diffusion_analysis/pooled_diffusion_stats.csv",
+     "NC10",
+     "NC10"),
 ]
+
+NC10_ROI_ALPHA      = "Nuclear cycles 10/pooled_alpha_inside_outside_analysis/pooled_alpha_results_summary.csv"
+NC10_ROI_ALPHA_STATS = "Nuclear cycles 10/pooled_alpha_inside_outside_analysis/pooled_alpha_results_statistics.csv"
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -259,17 +272,19 @@ def main():
     ax = axes[1, 0]
     _plot_roi_comparison(ax, base, "D",
                          WT_ROI_DIFF, WT_ROI_DIFF_STATS,
-                         GNU_ROI_ENTRIES, colours)
-    ax.set_title("C  Inside vs Outside ER-ROI: D (µm²/s)")
+                         EXTRA_ROI_ENTRIES, colours)
+    ax.set_title("C  Inside vs Outside ER-ROI: D\n(WT, NC10, Gnu Later R1)")
     ax.set_ylabel("Median D (µm²/s)")
 
     # ── Panel D: Inside vs Outside ROI — alpha ────────────────────────────────
     ax = axes[1, 1]
-    # alpha: no Gnu alpha data yet, pass empty list
+    nc10_alpha_entries = [
+        (NC10_ROI_ALPHA, NC10_ROI_ALPHA_STATS, "NC10", "NC10"),
+    ]
     _plot_roi_comparison(ax, base, "alpha",
                          WT_ROI_ALPHA, WT_ROI_ALPHA_STATS,
-                         [], colours)
-    ax.set_title("D  Inside vs Outside ER-ROI: α (WT only)")
+                         nc10_alpha_entries, colours)
+    ax.set_title("D  Inside vs Outside ER-ROI: α\n(WT and NC10)")
     ax.set_ylabel("Median α  (1 = pure Brownian)")
     ax.axhline(1.0, color="k", lw=0.7, ls="--", alpha=0.5)
 
