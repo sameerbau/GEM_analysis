@@ -1,0 +1,6 @@
+embryo,noise_floor_D_um2s,partition_size_used,note
+Set1_001,0.010229727105048554,5,Mean D from 5-frame partitions (upper-bound noise estimate)
+Set1_002,0.011933109273453844,5,Mean D from 5-frame partitions (upper-bound noise estimate)
+Set1_006,0.011222002732138367,5,Mean D from 5-frame partitions (upper-bound noise estimate)
+Set2_003,0.011168552710311969,5,Mean D from 5-frame partitions (upper-bound noise estimate)
+Set2_005,,5,Mean D from 5-frame partitions (upper-bound noise estimate)
