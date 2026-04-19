@@ -26,7 +26,7 @@ Options
   --dt FLOAT                Frame interval in seconds (default: 0.1)
   --pixel FLOAT             Pixel size in µm (default: 0.094367)
   --max_fit_points INT      Maximum lag points for MSD linear fit (default: 11)
-  --fit_fraction FLOAT      Max fraction of track used for MSD fit (default: 0.25)
+  --fit_fraction FLOAT      Max fraction of track used for MSD fit (default: 0.8)
   --recursive               Also search sub-folders for Traj_*.csv files
   --output_dir PATH         Where to save results (default: <folder>/pipeline_output)
 """
@@ -54,7 +54,7 @@ _PIXEL        = 0.094367
 _MIN_LEN      = 10
 _MAX_LEN      = 20
 _MAX_FIT_PTS  = 11
-_FIT_FRACTION = 0.25
+_FIT_FRACTION = 0.8
 # ─────────────────────────────────────────────────────────────────────────────
 
 
