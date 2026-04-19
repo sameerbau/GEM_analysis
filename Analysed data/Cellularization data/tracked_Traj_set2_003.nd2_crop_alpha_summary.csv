@@ -1,0 +1,12 @@
+Parameter,Value
+n_trajectories,288.0
+alpha_mean,0.8266246310201164
+alpha_median,0.7983420783620967
+alpha_std,0.30260956570896813
+alpha_sem,0.017831439663727293
+D_original_mean,0.06253611913664099
+D_generalized_mean,0.06945181433431226
+normal_diffusion_%,20.48611111111111
+sub_diffusion_%,60.06944444444444
+super_diffusion_%,18.75
+confined_%,0.6944444444444444
