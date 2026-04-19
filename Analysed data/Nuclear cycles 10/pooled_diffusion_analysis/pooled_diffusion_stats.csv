@@ -1,0 +1,3 @@
+Test,Statistic,P_value,Significant
+Mann-Whitney U,2690348.0,4.648122955674547e-12,True
+Kolmogorov-Smirnov,0.10161315957929241,2.842341064593252e-10,True
