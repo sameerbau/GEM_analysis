@@ -1,0 +1,1506 @@
+Key,Value
+ BitsPerPixel,16
+ DimensionOrder,XYCZT
+ IsInterleaved,false
+ IsRGB,false
+ LittleEndian,true
+ PixelType,uint16
+ Series 0 Name,PB_em1.nd2 (series 1)
+ SizeC,2
+ SizeT,150
+ SizeX,512
+ SizeY,512
+ SizeZ,1
+(1x)       Port 3 #1,Off
+(1x)       Port 3 #2,Off
+(2.8x)       Port 2 #1,Off
+(2.8x)       Port 2 #2,Off
+(4x)    Plane #2
+(4x)    Time Loop,150
+- Equidistant (Duration 15 s) Dual Prime BSI  Binning,2x2
+AdvancedGUI,true
+Analyzer Cube #1,Extracted
+Analyzer Cube #2,Extracted
+Analyzer Slider #1,Extracted
+Analyzer Slider #2,Extracted
+Average,1
+AverageToQuality,0
+Bertrand Lens, position #1,Out
+Bertrand Lens, position #2,Out
+Binning #1,2x2
+Binning #2,2x2
+Bit Depth #1,16-bit
+Bit Depth #2,16-bit
+Bit Depth #3,16-bit
+Bottom,1536
+CSU-W1 Aperture #1,10
+CSU-W1 Aperture #2,10
+CSU-W1 SoRa   Camera Settings #1
+CSU-W1 SoRa   Camera Settings #2
+CSU-W1 SoRa Magnification #1
+CSU-W1 SoRa Magnification #2
+CSU-W1, Disk Position #1,SoRa
+CSU-W1, Disk Position #2,SoRa
+CSU-W1, FilterChanger(DM Wheel) #1,1 (Di01-T405/488/568/647-13x15x0.5)
+CSU-W1, FilterChanger(DM Wheel) #2,1 (Di01-T405/488/568/647-13x15x0.5)
+CSU-W1, FilterChanger(EM Wheel) #1,3 (EM B617/73)
+CSU-W1, FilterChanger(EM Wheel) #2,3 (EM B617/73)
+CSU-W1, FilterChanger(EM2 Wheel) #1,2 (EM B525/50)
+CSU-W1, FilterChanger(EM2 Wheel) #2,2 (EM B525/50)
+CSU-W1, FilterChanger(Light Path Changer) #1,1 (DM A561LP)
+CSU-W1, FilterChanger(Light Path Changer) #2,1 (DM A561LP)
+CSU-W1, Observation Mode #1,Confocal
+CSU-W1, Observation Mode #2,Confocal
+CSU-W1, Shutter(CSU) #1,Open
+CSU-W1, Shutter(CSU) #2,Open
+CSU-W1, rpm #1,4000
+CSU-W1, rpm #2,4000
+Cam0AlignHShift,0
+Cam0AlignVShift,0
+Cam0Flip,false
+Cam0Rotate180,false
+Cam1AlignHShift,0
+Cam1AlignVShift,0
+Cam1Flip,true
+Cam1Rotate180,false
+Camera Name,Dual Prime BSI
+CameraFamilyName,PVCAM Dual Prime BSI
+CameraUniqueName,PVCAM Dual Prime BSI
+CameraUserName,Dual Prime BSI
+CaptureMaxExposure,1000
+CaptureQuality,25
+ChannelColor,65407
+ChannelCount,2
+ChannelIsActive,true
+ChannelName,Comp5
+ChannelOrder,01
+ClearCycles,2
+ClearMode,1
+Color,65316
+Columns,2
+Component Count #1,1
+Component Count #2,1
+Conversion Gain #1,HDR
+Conversion Gain #2,HDR
+Conversion Gain #3,HDR
+ConversionGain,1
+DIC Prism, position #1,Out
+DIC Prism, position #2,Out
+Denoising #1,Off
+Denoising #2,Off
+Denoising #3,Off
+Desc,Ti2 ZDrive
+DesiredTemperature,-10.0
+EmWavelength,520
+EnableAutoExposure,false
+ExWavelength,0
+ExcitationSourceKey,laser
+ExcitationSourceName,NIDAQ, MultiLaser(laser)
+Exposure,100
+Exposure #1,100.0
+Exposure #2,100 ms
+Exposure #3,100 ms
+Exposure #4,100 ms
+Exposure time (primary XML),0.1
+Exposure time (secondary XML) #1,0.1
+Exposure time (secondary XML) #2,0.1
+Exposure time (secondary XML) #3,0.1
+Exposure time (text) #1,0.1
+Exposure time (text) #2,0.1
+Fan Speed #1,High
+Fan Speed #2,High
+Fan Speed #3,High
+FanSpeed,0
+FilterWaveLength,558.0
+FlexibleHeight,-1
+Group,1
+ID,Z1
+Integrate,1
+Key,MV=0,TA=0,CH=2
+LastEmissionFilterKey1,EM Wheel
+LastEmissionFilterKey2,EM Wheel
+LastEmissionFilterName1,CSU-W1, FilterChanger(EM Wheel)
+LastEmissionFilterName2,CSU-W1, FilterChanger(EM Wheel)
+Left,512
+LightPath #1,L100
+LightPath #2,L100
+Line:1; ExW:488; Power #1,98.4; On
+Line:1; ExW:488; Power #2,98.4; On
+Line:2; ExW:561; Power #1,99.6; On
+Line:2; ExW:561; Power #2,99.6; On
+Line:3; ExW:640; Power #1,50.0; Off
+Line:3; ExW:640; Power #2,50.0; Off
+LiveSpeedUp,1
+Location,C:\Users\wanglab-PC-2\Desktop\GEM-ER\KDEL GEM\New folder\ND2 files\Nd2 files\Preblastoderm\Nd2\ND2 files\PB_em1.nd2
+MaxSaturatedValue,4294967295
+Metadata,Dimensions: T(150)
+Microscope #1,Ti2 Microscope
+Microscope #2,Ti2 Microscope
+Microscope Settings #1
+Microscope Settings #2
+Modality #1,Widefield Fluorescence, Spinning Disk Confocal,
+Modality #2,Widefield Fluorescence, Spinning Disk Confocal,
+ModifiedAtJDN,2460572.83810185
+MultiViewEnabled,false
+Multiplier #1,Off
+Multiplier #2,Off
+Multiplier #3,Off
+NIDAQ, MultiLaser(laser) #1
+NIDAQ, MultiLaser(laser) #2
+NIDAQ, Shutter(488) #1,Open
+NIDAQ, Shutter(488) #2,Open
+NIDAQ, Shutter(561) #1,Open
+NIDAQ, Shutter(561) #2,Open
+NIDAQ, Shutter(640) #1,Closed
+NIDAQ, Shutter(640) #2,Closed
+NIDAQ, Shutter(Poly) #1,Closed
+NIDAQ, Shutter(Poly) #2,Closed
+NIDAQ, Shutter(laser) #1,Active
+NIDAQ, Shutter(laser) #2,Active
+Name,Mono 2
+Name #1,Mono 2
+Name #2,Mono 1
+Name #3,Mono 2
+Negate,0
+Nikon Ti2, FilterChanger(Turret-Lo) #1,1 (Empty)
+Nikon Ti2, FilterChanger(Turret-Lo) #2,1 (Empty)
+Nikon Ti2, Illuminator(DIA) #1,Off
+Nikon Ti2, Illuminator(DIA) #2,Off
+Nikon Ti2, Illuminator(DIA) Iris intensity #1,20.0
+Nikon Ti2, Illuminator(DIA) Iris intensity #2,20.0
+Nikon Ti2, Shutter(DIA LED) #1,Closed
+Nikon Ti2, Shutter(DIA LED) #2,Closed
+Nikon Ti2, Shutter(FL-Lo) #1,Closed
+Nikon Ti2, Shutter(FL-Lo) #2,Closed
+Nosepiece #1,3
+Nosepiece #2,3
+Number of Picture Planes,2
+Numerical Aperture,1.4
+PFIsForTriggering,/Dev4/PFI0,/SimDev1/PFI0
+PFS Offset #001,6429
+PFS Offset #002,6429
+PFS Offset #003,6429
+PFS Offset #004,6429
+PFS Offset #005,6429
+PFS Offset #006,6429
+PFS Offset #007,6429
+PFS Offset #008,6429
+PFS Offset #009,6429
+PFS Offset #010,6429
+PFS Offset #011,6429
+PFS Offset #012,6429
+PFS Offset #013,6429
+PFS Offset #014,6429
+PFS Offset #015,6429
+PFS Offset #016,6429
+PFS Offset #017,6429
+PFS Offset #018,6429
+PFS Offset #019,6429
+PFS Offset #020,6429
+PFS Offset #021,6429
+PFS Offset #022,6429
+PFS Offset #023,6429
+PFS Offset #024,6429
+PFS Offset #025,6429
+PFS Offset #026,6429
+PFS Offset #027,6429
+PFS Offset #028,6429
+PFS Offset #029,6429
+PFS Offset #030,6429
+PFS Offset #031,6429
+PFS Offset #032,6429
+PFS Offset #033,6429
+PFS Offset #034,6429
+PFS Offset #035,6429
+PFS Offset #036,6429
+PFS Offset #037,6429
+PFS Offset #038,6429
+PFS Offset #039,6429
+PFS Offset #040,6429
+PFS Offset #041,6429
+PFS Offset #042,6429
+PFS Offset #043,6429
+PFS Offset #044,6429
+PFS Offset #045,6429
+PFS Offset #046,6429
+PFS Offset #047,6429
+PFS Offset #048,6429
+PFS Offset #049,6429
+PFS Offset #050,6429
+PFS Offset #051,6429
+PFS Offset #052,6429
+PFS Offset #053,6429
+PFS Offset #054,6429
+PFS Offset #055,6429
+PFS Offset #056,6429
+PFS Offset #057,6429
+PFS Offset #058,6429
+PFS Offset #059,6429
+PFS Offset #060,6429
+PFS Offset #061,6429
+PFS Offset #062,6429
+PFS Offset #063,6429
+PFS Offset #064,6429
+PFS Offset #065,6429
+PFS Offset #066,6429
+PFS Offset #067,6429
+PFS Offset #068,6429
+PFS Offset #069,6429
+PFS Offset #070,6429
+PFS Offset #071,6429
+PFS Offset #072,6429
+PFS Offset #073,6429
+PFS Offset #074,6429
+PFS Offset #075,6429
+PFS Offset #076,6429
+PFS Offset #077,6429
+PFS Offset #078,6429
+PFS Offset #079,6429
+PFS Offset #080,6429
+PFS Offset #081,6429
+PFS Offset #082,6429
+PFS Offset #083,6429
+PFS Offset #084,6429
+PFS Offset #085,6429
+PFS Offset #086,6429
+PFS Offset #087,6429
+PFS Offset #088,6429
+PFS Offset #089,6429
+PFS Offset #090,6429
+PFS Offset #091,6429
+PFS Offset #092,6429
+PFS Offset #093,6429
+PFS Offset #094,6429
+PFS Offset #095,6429
+PFS Offset #096,6429
+PFS Offset #097,6429
+PFS Offset #098,6429
+PFS Offset #099,6429
+PFS Offset #100,6429
+PFS Offset #101,6429
+PFS Offset #102,6429
+PFS Offset #103,6429
+PFS Offset #104,6429
+PFS Offset #105,6429
+PFS Offset #106,6429
+PFS Offset #107,6429
+PFS Offset #108,6429
+PFS Offset #109,6429
+PFS Offset #110,6429
+PFS Offset #111,6429
+PFS Offset #112,6429
+PFS Offset #113,6429
+PFS Offset #114,6429
+PFS Offset #115,6429
+PFS Offset #116,6429
+PFS Offset #117,6429
+PFS Offset #118,6429
+PFS Offset #119,6429
+PFS Offset #120,6429
+PFS Offset #121,6429
+PFS Offset #122,6429
+PFS Offset #123,6429
+PFS Offset #124,6429
+PFS Offset #125,6429
+PFS Offset #126,6429
+PFS Offset #127,6429
+PFS Offset #128,6429
+PFS Offset #129,6429
+PFS Offset #130,6429
+PFS Offset #131,6429
+PFS Offset #132,6429
+PFS Offset #133,6429
+PFS Offset #134,6429
+PFS Offset #135,6429
+PFS Offset #136,6429
+PFS Offset #137,6429
+PFS Offset #138,6429
+PFS Offset #139,6429
+PFS Offset #140,6429
+PFS Offset #141,6429
+PFS Offset #142,6429
+PFS Offset #143,6429
+PFS Offset #144,6429
+PFS Offset #145,6429
+PFS Offset #146,6429
+PFS Offset #147,6429
+PFS Offset #148,6429
+PFS Offset #149,6429
+PFS Offset #150,6429
+PFS Status #001,0
+PFS Status #002,0
+PFS Status #003,0
+PFS Status #004,0
+PFS Status #005,0
+PFS Status #006,0
+PFS Status #007,0
+PFS Status #008,0
+PFS Status #009,0
+PFS Status #010,0
+PFS Status #011,0
+PFS Status #012,0
+PFS Status #013,0
+PFS Status #014,0
+PFS Status #015,0
+PFS Status #016,0
+PFS Status #017,0
+PFS Status #018,0
+PFS Status #019,0
+PFS Status #020,0
+PFS Status #021,0
+PFS Status #022,0
+PFS Status #023,0
+PFS Status #024,0
+PFS Status #025,0
+PFS Status #026,0
+PFS Status #027,0
+PFS Status #028,0
+PFS Status #029,0
+PFS Status #030,0
+PFS Status #031,0
+PFS Status #032,0
+PFS Status #033,0
+PFS Status #034,0
+PFS Status #035,0
+PFS Status #036,0
+PFS Status #037,0
+PFS Status #038,0
+PFS Status #039,0
+PFS Status #040,0
+PFS Status #041,0
+PFS Status #042,0
+PFS Status #043,0
+PFS Status #044,0
+PFS Status #045,0
+PFS Status #046,0
+PFS Status #047,0
+PFS Status #048,0
+PFS Status #049,0
+PFS Status #050,0
+PFS Status #051,0
+PFS Status #052,0
+PFS Status #053,0
+PFS Status #054,0
+PFS Status #055,0
+PFS Status #056,0
+PFS Status #057,0
+PFS Status #058,0
+PFS Status #059,0
+PFS Status #060,0
+PFS Status #061,0
+PFS Status #062,0
+PFS Status #063,0
+PFS Status #064,0
+PFS Status #065,0
+PFS Status #066,0
+PFS Status #067,0
+PFS Status #068,0
+PFS Status #069,0
+PFS Status #070,0
+PFS Status #071,0
+PFS Status #072,0
+PFS Status #073,0
+PFS Status #074,0
+PFS Status #075,0
+PFS Status #076,0
+PFS Status #077,0
+PFS Status #078,0
+PFS Status #079,0
+PFS Status #080,0
+PFS Status #081,0
+PFS Status #082,0
+PFS Status #083,0
+PFS Status #084,0
+PFS Status #085,0
+PFS Status #086,0
+PFS Status #087,0
+PFS Status #088,0
+PFS Status #089,0
+PFS Status #090,0
+PFS Status #091,0
+PFS Status #092,0
+PFS Status #093,0
+PFS Status #094,0
+PFS Status #095,0
+PFS Status #096,0
+PFS Status #097,0
+PFS Status #098,0
+PFS Status #099,0
+PFS Status #100,0
+PFS Status #101,0
+PFS Status #102,0
+PFS Status #103,0
+PFS Status #104,0
+PFS Status #105,0
+PFS Status #106,0
+PFS Status #107,0
+PFS Status #108,0
+PFS Status #109,0
+PFS Status #110,0
+PFS Status #111,0
+PFS Status #112,0
+PFS Status #113,0
+PFS Status #114,0
+PFS Status #115,0
+PFS Status #116,0
+PFS Status #117,0
+PFS Status #118,0
+PFS Status #119,0
+PFS Status #120,0
+PFS Status #121,0
+PFS Status #122,0
+PFS Status #123,0
+PFS Status #124,0
+PFS Status #125,0
+PFS Status #126,0
+PFS Status #127,0
+PFS Status #128,0
+PFS Status #129,0
+PFS Status #130,0
+PFS Status #131,0
+PFS Status #132,0
+PFS Status #133,0
+PFS Status #134,0
+PFS Status #135,0
+PFS Status #136,0
+PFS Status #137,0
+PFS Status #138,0
+PFS Status #139,0
+PFS Status #140,0
+PFS Status #141,0
+PFS Status #142,0
+PFS Status #143,0
+PFS Status #144,0
+PFS Status #145,0
+PFS Status #146,0
+PFS Status #147,0
+PFS Status #148,0
+PFS Status #149,0
+PFS Status #150,0
+PFS, Dish Type #1,Glass
+PFS, Dish Type #2,Glass
+PFS, mirror #1,Inserted
+PFS, mirror #2,Inserted
+PFS, offset #1,6429
+PFS, offset #2,6429
+PFS, state #1,Off
+PFS, state #2,Off
+Plane #1
+Port 1 #1,On
+Port 1 #2,On
+QuantilPixels,100
+QuantilPromile,0.1
+QuantilRelative,true
+Readout Speed #1,100.0MHz
+Readout Speed #2,100.0MHz
+Readout Speed #3,100.0MHz
+Refractive Index,1.515
+Right,1536
+Rotate,0.0
+Rows,2
+SLxImageAttributes,13
+SelectionStyle,0
+SensorMode,1
+SetColorManually,true
+Size,150
+Temperature #1,-9.9°C
+Temperature #2,-9.9°C
+Temperature #3,-9.9°C
+TextInfoItem_13,Apo 60x Oil λS DIC N2
+TextInfoItem_5,Metadata:
+Dimensions: T(150)
+Camera Name: Dual Prime BSI
+Numerical Aperture: 1.4
+Refractive Index: 1.515
+Number of Picture Planes: 2
+Plane #1:
+ Name: Mono 1
+ Component Count: 1
+ Modality: Widefield Fluorescence, Spinning Disk Confocal, 
+           CSU-W1 SoRa
+ Camera Settings:   Binning: 2x2
+  Bit Depth: 16-bit
+  Exposure: 100 ms
+  Readout Speed: 100.0MHz
+  Multiplier: Off
+  Temperature: -9.9°C
+  
+  Conversion Gain: HDR
+  Denoising: Off
+  Fan Speed: High
+
+ Microscope Settings:   Microscope: Ti2 Microscope
+  DIC Prism, position: Out
+  Bertrand Lens, position: Out
+  Nosepiece: 3
+  Nikon Ti2, FilterChanger(Turret-Lo): 1 (Empty)
+  Nikon Ti2, Shutter(FL-Lo): Closed
+  Nikon Ti2, Shutter(DIA LED): Closed
+  Nikon Ti2, Illuminator(DIA): Off
+  Nikon Ti2, Illuminator(DIA) Iris intensity: 20.0
+  LightPath: L100
+  Analyzer Slider: Extracted
+  Analyzer Cube: Extracted
+  PFS, state: Off
+  PFS, offset: 6429
+  PFS, mirror: Inserted
+  PFS, Dish Type: Glass
+  Zoom: 1.00x
+  NIDAQ, Shutter(laser): Active
+  NIDAQ, Shutter(488): Open
+  NIDAQ, Shutter(561): Open
+  NIDAQ, Shutter(640): Closed
+  NIDAQ, Shutter(Poly): Closed
+  NIDAQ, MultiLaser(laser):
+     Line:1; ExW:488; Power: 98.4; On
+     Line:2; ExW:561; Power: 99.6; On
+     Line:3; ExW:640; Power: 50.0; Off
+  
+  CSU-W1, FilterChanger(Light Path Changer): 1 (DM A561LP)
+  CSU-W1, FilterChanger(DM Wheel): 1 (Di01-T405/488/568/647-13x15x0.5)
+  CSU-W1, FilterChanger(EM Wheel): 3 (EM B617/73)
+  CSU-W1, FilterChanger(EM2 Wheel): 2 (EM B525/50)
+  CSU-W1, Shutter(CSU): Open
+  CSU-W1 Aperture: 10
+  CSU-W1, Observation Mode: Confocal
+  CSU-W1, rpm: 4000
+  CSU-W1, Disk Position: SoRa
+  CSU-W1 SoRa Magnification:
+     Port 1: On  (2.8x)
+     Port 2: Off  (1x)
+     Port 3: Off  (4x)
+
+Plane #2:
+ Name: Mono 2
+ Component Count: 1
+ Modality: Widefield Fluorescence, Spinning Disk Confocal, 
+           CSU-W1 SoRa
+ Camera Settings:   Binning: 2x2
+  Bit Depth: 16-bit
+  Exposure: 100 ms
+  Readout Speed: 100.0MHz
+  Multiplier: Off
+  Temperature: -9.9°C
+  
+  Conversion Gain: HDR
+  Denoising: Off
+  Fan Speed: High
+
+ Microscope Settings:   Microscope: Ti2 Microscope
+  DIC Prism, position: Out
+  Bertrand Lens, position: Out
+  Nosepiece: 3
+  Nikon Ti2, FilterChanger(Turret-Lo): 1 (Empty)
+  Nikon Ti2, Shutter(FL-Lo): Closed
+  Nikon Ti2, Shutter(DIA LED): Closed
+  Nikon Ti2, Illuminator(DIA): Off
+  Nikon Ti2, Illuminator(DIA) Iris intensity: 20.0
+  LightPath: L100
+  Analyzer Slider: Extracted
+  Analyzer Cube: Extracted
+  PFS, state: Off
+  PFS, offset: 6429
+  PFS, mirror: Inserted
+  PFS, Dish Type: Glass
+  Zoom: 1.00x
+  NIDAQ, Shutter(laser): Active
+  NIDAQ, Shutter(488): Open
+  NIDAQ, Shutter(561): Open
+  NIDAQ, Shutter(640): Closed
+  NIDAQ, Shutter(Poly): Closed
+  NIDAQ, MultiLaser(laser):
+     Line:1; ExW:488; Power: 98.4; On
+     Line:2; ExW:561; Power: 99.6; On
+     Line:3; ExW:640; Power: 50.0; Off
+  
+  CSU-W1, FilterChanger(Light Path Changer): 1 (DM A561LP)
+  CSU-W1, FilterChanger(DM Wheel): 1 (Di01-T405/488/568/647-13x15x0.5)
+  CSU-W1, FilterChanger(EM Wheel): 3 (EM B617/73)
+  CSU-W1, FilterChanger(EM2 Wheel): 2 (EM B525/50)
+  CSU-W1, Shutter(CSU): Open
+  CSU-W1 Aperture: 10
+  CSU-W1, Observation Mode: Confocal
+  CSU-W1, rpm: 4000
+  CSU-W1, Disk Position: SoRa
+  CSU-W1 SoRa Magnification:
+     Port 1: On  (2.8x)
+     Port 2: Off  (1x)
+     Port 3: Off  (4x)
+
+Time Loop: 150
+- Equidistant (Duration 15 s)
+TextInfoItem_6,Dual Prime BSI
+Binning: 2x2
+Bit Depth: 16-bit
+Exposure: 100 ms
+Readout Speed: 100.0MHz
+Multiplier: Off
+Temperature: -9.9°C
+
+Conversion Gain: HDR
+Denoising: Off
+Fan Speed: High
+
+TextInfoItem_9,9/19/2024  5:06:36 PM
+TimeAfter,1
+TimeBefore,1
+Top,512
+Type,3
+TypeID,0
+Unit,µm
+UpdateLPAutomatically,true
+UserEventType,2
+Zoom #1,1.00x
+Zoom #2,1.00x
+__m_runType,RLxIRect
+bCalibrated,false
+bCamCorrReq,true
+bCanExecAsyncSampleGet,true
+bControlLight,true
+bControlShutter,true
+bDurationPref,true
+bEnablePeriodic,false
+bIsCrop,false
+bKeepObject,false
+bPickFromGraph,false
+bPiezoZTriggered,false
+bPoints,false
+bRDCheck,true
+bShowTime,false
+bUseHWSequencer,false
+bUseIntenzityCorrection,false
+bUsePFS,false
+bUseTiRecipe,false
+bUseTriggeredAcquisition,false
+bUseWatterSupply,true
+bValid,true
+bZPosAbsolute,true
+bottom,1536
+cx,4
+cy,4
+dAcqTime,0.0
+dAngle,0.0
+dAspect,1.0
+dAvgPeriodDiff,98.05712751679172
+dBinningX,2
+dBinningY,2
+dCalibPrecision,-1.0
+dCalibration,0.09436701509872214
+dCompressionParam,0
+dCropAspect,1.0
+dCropXOffset,0.0
+dCropYOffset,0.0
+dCropZoom,1.0
+dDuration,15000.0
+dExposureTime,100.0
+dFadingCorr,0.0
+dFps,100
+dGainCustom,1
+dGainGrayScale,1
+dGainGrouped,1
+dGainTrueColor,1
+dGammaSrc,1
+dLampVoltage,0.0
+dMax,2
+dMaxPeriodDiff,100.07200000062585
+dMin,0
+dMinPeriodDiff,100.07199999690056
+dObjCalibration1to1,0.0
+dObjectiveMag,-1.0
+dObjectiveNA,1.4
+dObjectiveToPinholeZoom,1.0
+dOffset,0.0
+dOffsetCustom,0
+dOffsetGrayScal,0
+dOffsetGrouped,0
+dOffsetTrueColor,0
+dPeriod,0.0
+dPinholeDiameter,50.0
+dPrecision,10.0
+dProjectiveMag,-1.0
+dRange,18.0
+dRefractIndex,1.515
+dRefractIndex1,1.515
+dRefractIndex2,1.515
+dRelayLensZoom,0.82
+dScalingToIntensity,0.0
+dScanAreaAspect,1.0
+dSensitivity,4
+dSpeed,10.0
+dStart,0.0
+dStep,1.8
+dStgLgCT11,-0.9999731328638829
+dStgLgCT12,0.007330317209453587
+dStgLgCT21,-0.007330317209453587
+dStgLgCT22,-0.9999731328638829
+dTValue,0.0
+dTemperK,-1.0
+dTimeAbsolute,2460572.8379202085
+dTimeAxisCalibration,-1.0
+dTimeMSec,0.0
+dValTime,100.0
+dWavelength,0.0
+dXOffset,0.0
+dXPos,-3896.6000000000004
+dYOffset,0.0
+dYPos,128.4
+dZAxisCalibration,-1.0
+dZPos,4903.7
+dZoom,2.296
+eCompression,2
+ePictureXAxis,0
+ePictureYAxis,1
+ePixelType,1
+eRecord,1
+eRepresentation,0
+eTimeSource,0
+eType,0
+fMaxSrc,1
+fMinSrc,0
+iChannelSeriesIndex,-1
+iDegree,0
+iFocusCriterion,0
+iVersion,2
+left,512
+m_CompanyString,Laboratory Imaging s.r.o.
+m_CopyrightString,Copyright © 1991-2020  Laboratory Imaging,  http://www.lim.cz
+m_GrabberString,Photometrics
+m_SWNameString,NIS-Elements AR
+m_VersionString,5.21.03 (Build 1489)
+m_bEnableAutoContrast,true
+m_bEnableAutoWhite,false
+m_bGraphVerticalSplit,false
+m_bGrayGraph,false
+m_bLaserOutputPortUsed0-00,1
+m_bLaserOutputPortUsed0-01,0
+m_bLaserOutputPortUsed1-00,0
+m_bLaserOutputPortUsed1-01,1
+m_bLaserOutputPortUsed2-00,1
+m_bLaserOutputPortUsed2-01,0
+m_bLaserOutputPortUsed2-02,0
+m_bMultiLaserLineUsed0-00,1
+m_bMultiLaserLineUsed0-01,1
+m_bMultiLaserLineUsed0-02,0
+m_bMultiLaser_LineUsedLineUsed0-00,1
+m_bMultiLaser_LineUsedLineUsed0-01,1
+m_bMultiLaser_LineUsedLineUsed0-02,0
+m_bParamsValid0,1
+m_bRatioViewEnabled,false
+m_bShowAllComp,true
+m_bShowSpectralGraph,true
+m_bViewLut,true
+m_dAperturePosition0,10.0
+m_dGraphOffset00,0
+m_dGraphOffset01,0
+m_dGraphOffset02,0
+m_dGraphZoom00,1
+m_dGraphZoom01,1
+m_dGraphZoom02,1
+m_dLightIrisIntensity0,20.0
+m_dLightNDFilter0,0.0
+m_dLightVoltage0,0.0
+m_dLogMaxX0,57000.0
+m_dLogMaxY0,37500.0
+m_dLogMinX0,-57000.0
+m_dLogMinY0,-37500.0
+m_dMultiLaserLinePower0-00,98.4
+m_dMultiLaserLinePower0-01,99.6
+m_dMultiLaserLinePower0-02,50.0
+m_dMultiLaser_PowerLinePower0-00,98.4
+m_dMultiLaser_PowerLinePower0-01,99.6
+m_dMultiLaser_PowerLinePower0-02,50.0
+m_dShutterAperture0,0.0
+m_dShutterAperture1,0.0
+m_dShutterAperture2,0.0
+m_dShutterAperture3,0.0
+m_dShutterAperture4,0.0
+m_dShutterAperture5,0.0
+m_dShutterAperture6,0.0
+m_dShutterAperture7,0.0
+m_dXYPositionX0,-3896.6000000000004
+m_dXYPositionY0,128.4
+m_dZPosition0,4903.7
+m_dZoomPosition,1.0
+m_eApertureType0,1
+m_eFilterType0,2
+m_eFilterType1,2
+m_eFilterType2,2
+m_eFilterType3,1
+m_eFilterType4,1
+m_eLightPowerType0,3
+m_eLightStateType0,3
+m_eLightType0,3
+m_eNature,0
+m_ePFSDishType,0
+m_ePlacement,6
+m_eShutterMode0,0
+m_eShutterMode1,0
+m_eShutterMode2,0
+m_eShutterMode3,0
+m_eShutterMode4,0
+m_eShutterMode5,0
+m_eShutterMode6,0
+m_eShutterMode7,0
+m_eShutterType0,0
+m_eShutterType1,1
+m_eShutterType2,0
+m_eShutterType3,0
+m_eShutterType4,0
+m_eShutterType5,0
+m_eShutterType6,2
+m_eShutterType7,0
+m_eSpctType,1
+m_iAnalyzerUse,1
+m_iAnalyzerUse1,1
+m_iApertureUse0,1
+m_iFilterPosition0,0
+m_iFilterPosition1,0
+m_iFilterPosition2,0
+m_iFilterPosition3,2
+m_iFilterPosition4,1
+m_iFilterUse0,1
+m_iFilterUse1,1
+m_iFilterUse2,1
+m_iFilterUse3,1
+m_iFilterUse4,1
+m_iGraphScale,0
+m_iGraphSelected,-1
+m_iLaserOutputUse0,1
+m_iLaserOutputUse1,1
+m_iLaserOutputUse2,1
+m_iLightPathPosition,3
+m_iLightPathUse,1
+m_iLightPowerUse0,1
+m_iLightStateUse0,1
+m_iLightUse0,1
+m_iMicroscopeUse,1
+m_iMicroscope_BertrandLensUse,1
+m_iMicroscope_DICPrismUse,1
+m_iMultiLaserUse0,1
+m_iMultiLaser_LineUsedUse0,1
+m_iMultiLaser_NDFilterUse0,1
+m_iMultiLaser_PowerUse0,1
+m_iMultilaserLineNDFilter0-00,-1
+m_iMultilaserLineNDFilter0-01,-1
+m_iMultilaserLineNDFilter0-02,-1
+m_iMultilaser_NDFilterLineNDFilter0-00,-1
+m_iMultilaser_NDFilterLineNDFilter0-01,-1
+m_iMultilaser_NDFilterLineNDFilter0-02,-1
+m_iNosPosition,2
+m_iNosUse,1
+m_iPFSDMState,1
+m_iPFSDMUse,0
+m_iPFSDishTypeUse,0
+m_iPFSOffsetPosition,6429
+m_iPFSOffsetUse,0
+m_iPFSState,0
+m_iShutterUse0,1
+m_iShutterUse1,1
+m_iShutterUse2,1
+m_iShutterUse3,1
+m_iShutterUse4,1
+m_iShutterUse5,1
+m_iShutterUse6,1
+m_iShutterUse7,1
+m_iXOrientation0,1
+m_iXYUse0,0
+m_iYOrientation0,-1
+m_iZUse0,1
+m_iZoomUse,1
+m_ibAnalyzerExist,1
+m_ibAnalyzerExist1,1
+m_ibAnalyzerInserted,0
+m_ibAnalyzerInserted1,0
+m_ibAnalyzerStateValid,1
+m_ibAnalyzerStateValid1,1
+m_ibApertureExist0,1
+m_ibAperturePositionValid0,1
+m_ibBertrandLensPosition,0
+m_ibDICPrismPosition,0
+m_ibFilterActAsShutter0,0
+m_ibFilterActAsShutter1,0
+m_ibFilterActAsShutter2,0
+m_ibFilterActAsShutter3,0
+m_ibFilterActAsShutter4,0
+m_ibFilterExist0,1
+m_ibFilterExist1,1
+m_ibFilterExist2,1
+m_ibFilterExist3,1
+m_ibFilterExist4,1
+m_ibFilterPositionValid0,1
+m_ibFilterPositionValid1,1
+m_ibFilterPositionValid2,1
+m_ibFilterPositionValid3,1
+m_ibFilterPositionValid4,1
+m_ibLaserOutputExist0,1
+m_ibLaserOutputExist1,1
+m_ibLaserOutputExist2,1
+m_ibLaserOutputValid0,1
+m_ibLaserOutputValid1,1
+m_ibLaserOutputValid2,1
+m_ibLightExist0,1
+m_ibLightIrisControllable0,1
+m_ibLightIrisIntensityValid0,1
+m_ibLightNDFilterControllable0,0
+m_ibLightNDFilterValid0,0
+m_ibLightPathExist,1
+m_ibLightPathPositionValid,1
+m_ibLightPowerExist0,1
+m_ibLightSegmentsValid0,0
+m_ibLightStateControllable0,1
+m_ibLightStateExist0,1
+m_ibLightStateOn0,0
+m_ibLightStateValid0,1
+m_ibLightVoltageControllable0,0
+m_ibLightVoltageValid0,0
+m_ibMicroscopeExist,1
+m_ibMicroscope_BertrandLensExist,1
+m_ibMicroscope_DICPrismExist,1
+m_ibMultiLaserExist0,1
+m_ibMultiLaserValid0,1
+m_ibMultiLaser_LineUsedExist0,1
+m_ibMultiLaser_LineUsedValid0,1
+m_ibMultiLaser_NDFilterExist0,1
+m_ibMultiLaser_NDFilterValid0,1
+m_ibMultiLaser_PowerExist0,1
+m_ibMultiLaser_PowerValid0,1
+m_ibNosExist,1
+m_ibNosPositionValid,1
+m_ibPFSDMExist,1
+m_ibPFSDMStateValid,1
+m_ibPFSDishTypeExist,1
+m_ibPFSOffsetExist,1
+m_ibPFSOffsetPositionValid,1
+m_ibPFSStateValid,1
+m_ibShutterApertureValid0,1
+m_ibShutterApertureValid1,1
+m_ibShutterApertureValid2,1
+m_ibShutterApertureValid3,1
+m_ibShutterApertureValid4,1
+m_ibShutterApertureValid5,1
+m_ibShutterApertureValid6,1
+m_ibShutterApertureValid7,1
+m_ibShutterExist0,1
+m_ibShutterExist1,1
+m_ibShutterExist2,1
+m_ibShutterExist3,1
+m_ibShutterExist4,1
+m_ibShutterExist5,1
+m_ibShutterExist6,1
+m_ibShutterExist7,1
+m_ibShutterModeValid0,1
+m_ibShutterModeValid1,1
+m_ibShutterModeValid2,1
+m_ibShutterModeValid3,1
+m_ibShutterModeValid4,1
+m_ibShutterModeValid5,1
+m_ibShutterModeValid6,1
+m_ibShutterModeValid7,1
+m_ibShutterStateOpen0,0
+m_ibShutterStateOpen1,0
+m_ibShutterStateOpen2,1
+m_ibShutterStateOpen3,1
+m_ibShutterStateOpen4,1
+m_ibShutterStateOpen5,0
+m_ibShutterStateOpen6,0
+m_ibShutterStateOpen7,1
+m_ibShutterStateValid0,1
+m_ibShutterStateValid1,1
+m_ibShutterStateValid2,1
+m_ibShutterStateValid3,1
+m_ibShutterStateValid4,1
+m_ibShutterStateValid5,1
+m_ibShutterStateValid6,1
+m_ibShutterStateValid7,1
+m_ibXYExist0,0
+m_ibXYPositionValid0,1
+m_ibZExist0,0
+m_ibZPositionValid0,1
+m_ibZoomExist,1
+m_ibZoomPositionValid,1
+m_sActiveShutterKey,laser
+m_sActiveShutterKey1,laser
+m_sActiveShutterKey2,laser
+m_sActiveShutterKey3,laser
+m_sActiveShutterKey4,laser
+m_sAnalyzerFullName,Ti2 Analyzer Slider
+m_sAnalyzerFullName1,Ti2 Analyzer Cube
+m_sAnalyzerKey,Analyzer Slider
+m_sAnalyzerKey1,Analyzer Cube
+m_sAnalyzerPhysFullName,Nikon Ti2
+m_sAnalyzerPhysFullName1,Nikon Ti2
+m_sAnalyzerShortName,Analyzer Slider
+m_sAnalyzerShortName1,Analyzer Cube
+m_sApertureFullName0,CSU-W1 Aperture
+m_sApertureKey0,CSU-W1 Aperture
+m_sAperturePhysConnectionString0,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sAperturePhysFullName0,CSU-W1
+m_sApertureShortName0,CSU-W1 Aperture
+m_sFilterFullName0,Ti2 Turret1
+m_sFilterFullName1,CSU-W1 Filter Wheel Light Path
+m_sFilterFullName2,CSU-W1 Filter Wheel DM
+m_sFilterFullName3,CSU-W1 Filter Wheel EM 1
+m_sFilterFullName4,CSU-W1 Filter Wheel EM 2
+m_sFilterKey0,Turret-Lo
+m_sFilterKey1,Light Path Changer
+m_sFilterKey2,DM Wheel
+m_sFilterKey3,EM Wheel
+m_sFilterKey4,EM2 Wheel
+m_sFilterName0,Empty
+m_sFilterName1,DM A561LP
+m_sFilterName2,Di01-T405/488/568/647-13x15x0.5
+m_sFilterName3,EM B617/73
+m_sFilterName4,EM B525/50
+m_sFilterPhysConnectionString1,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sFilterPhysConnectionString2,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sFilterPhysConnectionString3,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sFilterPhysConnectionString4,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sFilterPhysFullName0,Nikon Ti2
+m_sFilterPhysFullName1,CSU-W1
+m_sFilterPhysFullName2,CSU-W1
+m_sFilterPhysFullName3,CSU-W1
+m_sFilterPhysFullName4,CSU-W1
+m_sFilterShortName0,Turret1
+m_sFilterShortName1,Light Path Changer
+m_sFilterShortName2,DM Wheel
+m_sFilterShortName3,EM1 Wheel
+m_sFilterShortName4,EM2 Wheel
+m_sLaserOutputFullName0,CSU-W1 Observation Mode
+m_sLaserOutputFullName1,CSU-W1 Pinhole
+m_sLaserOutputFullName2,CSU-W1 SoRa Magnification
+m_sLaserOutputKey0,CSU-W1 Observation Mode
+m_sLaserOutputKey1,CSU-W1 Pinhole
+m_sLaserOutputKey2,CSU-W1 SoRa Magnification
+m_sLaserOutputPhysConnectionString0,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sLaserOutputPhysConnectionString1,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sLaserOutputPhysConnectionString2,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sLaserOutputPhysFullName0,CSU-W1
+m_sLaserOutputPhysFullName1,CSU-W1
+m_sLaserOutputPhysFullName2,CSU-W1
+m_sLaserOutputShortName0,CSU-W1 Observation Mode
+m_sLaserOutputShortName1,CSU-W1 Pinhole
+m_sLaserOutputShortName2,CSU-W1 SoRa Magnification
+m_sLightFullName0,Ti2 Illuminator-DIA
+m_sLightKey0,DIA
+m_sLightPathFullName,Ti2 LightPath
+m_sLightPathKey,LightPath
+m_sLightPathPhysFullName,Nikon Ti2
+m_sLightPathPositionName,L100
+m_sLightPathShortName,LightPath
+m_sLightPhysFullName0,Nikon Ti2
+m_sLightPowerFullName0,Ti2 Illuminator-DIA
+m_sLightPowerKey0,DIA
+m_sLightPowerPhysFullName0,Nikon Ti2
+m_sLightPowerShortName0,DIA
+m_sLightShortName0,DIA
+m_sLightStateFullName0,Ti2 Illuminator-DIA
+m_sLightStateKey0,DIA
+m_sLightStatePhysFullName0,Nikon Ti2
+m_sLightStateShortName0,DIA
+m_sMicroscopeFullName,Ti2 Microscope
+m_sMicroscopeKey,Microscope
+m_sMicroscopePhysFullName,Nikon Ti2
+m_sMicroscopePhysShortName,Ti2 Microscope
+m_sMicroscopeShortName,Microscope
+m_sMicroscope_BertrandLensFullName,Ti2 Microscope
+m_sMicroscope_BertrandLensKey,Microscope
+m_sMicroscope_BertrandLensPhysFullName,Nikon Ti2
+m_sMicroscope_BertrandLensShortName,Microscope
+m_sMicroscope_DICPrismFullName,Ti2 Microscope
+m_sMicroscope_DICPrismKey,Microscope
+m_sMicroscope_DICPrismPhysFullName,Nikon Ti2
+m_sMicroscope_DICPrismShortName,Microscope
+m_sMultiLaserFullName0,NIDAQ AOTF Multilaser (laser)
+m_sMultiLaserKey0,laser
+m_sMultiLaserPhysFullName0,NIDAQ
+m_sMultiLaserShortName0,Illumination Device (laser)
+m_sMultiLaser_LineUsedFullName0,NIDAQ AOTF Multilaser (laser)
+m_sMultiLaser_LineUsedKey0,laser
+m_sMultiLaser_LineUsedPhysFullName0,NIDAQ
+m_sMultiLaser_LineUsedShortName0,Illumination Device (laser)
+m_sMultiLaser_NDFilterFullName0,NIDAQ AOTF Multilaser (laser)
+m_sMultiLaser_NDFilterKey0,laser
+m_sMultiLaser_NDFilterPhysFullName0,NIDAQ
+m_sMultiLaser_NDFilterShortName0,Illumination Device (laser)
+m_sMultiLaser_PowerFullName0,NIDAQ AOTF Multilaser (laser)
+m_sMultiLaser_PowerKey0,laser
+m_sMultiLaser_PowerPhysFullName0,NIDAQ
+m_sMultiLaser_PowerShortName0,Illumination Device (laser)
+m_sName,Custom
+m_sNosFullName,Ti2 Nosepiece
+m_sNosKey,Nosepiece
+m_sNosPhysFullName,Nikon Ti2
+m_sNosShortName,Nosepiece
+m_sPFSDMFullName,Ti2 PFS
+m_sPFSDMKey,PFS
+m_sPFSDMPhysFullName,Nikon Ti2
+m_sPFSDMShortName,PFS
+m_sPFSDishTypeFullName,Ti2 PFS
+m_sPFSDishTypeKey,PFS
+m_sPFSDishTypePhysFullName,Nikon Ti2
+m_sPFSDishTypeShortName,PFS
+m_sPFSOffsetFullName,Ti2 PFS
+m_sPFSOffsetKey,PFS
+m_sPFSOffsetPhysFullName,Nikon Ti2
+m_sPFSOffsetShortName,PFS
+m_sShutterFullName0,FL-Lo
+m_sShutterFullName1,DIA LED
+m_sShutterFullName2,NIDAQ AOTF Shutter (laser)
+m_sShutterFullName3,NIDAQ Shutter (name: 488)
+m_sShutterFullName4,NIDAQ Shutter (name: 561)
+m_sShutterFullName5,NIDAQ Shutter (name: 640)
+m_sShutterFullName6,NIDAQ Shutter (name: Poly)
+m_sShutterFullName7,CSU-W1
+m_sShutterKey0,FL-Lo
+m_sShutterKey1,DIA LED
+m_sShutterKey2,laser
+m_sShutterKey3,488
+m_sShutterKey4,561
+m_sShutterKey5,640
+m_sShutterKey6,Poly
+m_sShutterKey7,CSU
+m_sShutterPhysConnectionString7,m_iCOMPort=1;m_uiBaudRateValue=9600;
+m_sShutterPhysFullName0,Nikon Ti2
+m_sShutterPhysFullName1,Nikon Ti2
+m_sShutterPhysFullName2,NIDAQ
+m_sShutterPhysFullName3,NIDAQ
+m_sShutterPhysFullName4,NIDAQ
+m_sShutterPhysFullName5,NIDAQ
+m_sShutterPhysFullName6,NIDAQ
+m_sShutterPhysFullName7,CSU-W1
+m_sShutterShortName0,FL-Lo
+m_sShutterShortName1,DIA LED
+m_sShutterShortName2,Shutter (laser)
+m_sShutterShortName3,Shutter (name: 488)
+m_sShutterShortName4,Shutter (name: 561)
+m_sShutterShortName5,Shutter (name: 640)
+m_sShutterShortName6,Shutter (name: Poly)
+m_sShutterShortName7,CSU
+m_sUserName,Custom
+m_sXYFullName0,Ti2 XYDrive
+m_sXYKey0,XY Drive
+m_sXYPhysFullName0,Nikon Ti2
+m_sXYShortName0,XY Drive
+m_sZFullName0,Ti2 ZDrive
+m_sZKey0,Z Drive
+m_sZPhysFullName0,Nikon Ti2
+m_sZShortName0,Z Drive
+m_sZoomFullName,Ti2 Zoom
+m_sZoomKey,Zoom
+m_sZoomPhysFullName,Nikon Ti2
+m_sZoomShortName,Zoom
+m_uiAutoWhiteColor,16777215
+m_uiColor,65316
+m_uiCount,1
+m_uiLaserOutputPorts0,2
+m_uiLaserOutputPorts1,2
+m_uiLaserOutputPorts2,3
+m_uiLightSegmentCount0,0
+m_uiLightSegmentMask0,0
+m_uiMultiLaserLineColor0-00,0
+m_uiMultiLaserLineColor0-01,0
+m_uiMultiLaserLineColor0-02,0
+m_uiMultiLaserLineWavelength0-00,488
+m_uiMultiLaserLineWavelength0-01,561
+m_uiMultiLaserLineWavelength0-02,640
+m_uiMultiLaserLines0,3
+m_uiMultiLaser_LineUsedLineColor0-00,0
+m_uiMultiLaser_LineUsedLineColor0-01,0
+m_uiMultiLaser_LineUsedLineColor0-02,0
+m_uiMultiLaser_LineUsedLineWavelength0-00,488
+m_uiMultiLaser_LineUsedLineWavelength0-01,561
+m_uiMultiLaser_LineUsedLineWavelength0-02,640
+m_uiMultiLaser_LineUsedLines0,3
+m_uiMultiLaser_NDFilterLineColor0-00,0
+m_uiMultiLaser_NDFilterLineColor0-01,0
+m_uiMultiLaser_NDFilterLineColor0-02,0
+m_uiMultiLaser_NDFilterLineWavelength0-00,488
+m_uiMultiLaser_NDFilterLineWavelength0-01,561
+m_uiMultiLaser_NDFilterLineWavelength0-02,640
+m_uiMultiLaser_NDFilterLines0,3
+m_uiMultiLaser_PowerLineColor0-00,0
+m_uiMultiLaser_PowerLineColor0-01,0
+m_uiMultiLaser_PowerLineColor0-02,0
+m_uiMultiLaser_PowerLineWavelength0-00,488
+m_uiMultiLaser_PowerLineWavelength0-01,561
+m_uiMultiLaser_PowerLineWavelength0-02,640
+m_uiMultiLaser_PowerLines0,3
+m_uiPropGroupCount,1
+m_vectAnalogOutput_size,0
+m_vectAnalyzer_size,2
+m_vectAperture_size,1
+m_vectCalibratedAnalogOutput_size,0
+m_vectCondenser_size,0
+m_vectCorrectionCollar_size,0
+m_vectDMD_size,0
+m_vectFilterChanger_size,5
+m_vectGalvoXY_size,0
+m_vectLaserOutput_size,3
+m_vectLightPath_size,1
+m_vectLightPower_size,1
+m_vectLightRemote_size,0
+m_vectLightState_size,1
+m_vectLinearActuator_size,0
+m_vectMicroscope_BertrandLens_size,1
+m_vectMicroscope_DICPrism_size,1
+m_vectMicroscope_Polarizer_size,0
+m_vectMicroscope_TubeBaseTurret_size,0
+m_vectMicroscope_size,1
+m_vectMonochromator_size,0
+m_vectMultiLaser_LineUsed_size,1
+m_vectMultiLaser_NDFilter_size,1
+m_vectMultiLaser_Power_size,1
+m_vectNDFilter_size,0
+m_vectNosepiece_size,1
+m_vectPFSDM_size,1
+m_vectPFSDishType_size,1
+m_vectPFSOffset_size,1
+m_vectShutter_size,8
+m_vectTIRFAlignment_size,0
+m_vectTIRFMirror_size,0
+m_vectTIRFPosition_size,0
+m_vectTTLOutput_size,0
+m_vectXY_size,1
+m_vectZ_size,1
+m_vectZoom_size,1
+matRows,0
+no_name,2460572.83792021
+right,1536
+sCal.dFmax,1
+sCal.dFmin,255
+sCal.dKd,224
+sCal.dRmax,2
+sCal.dRmin,0
+sCal.dTMeasCalMax,0
+sCal.dTMeasCalMin,0
+sCal.dVisc,1
+sDescription,Mono 2
+sObjective,Apo 60x Oil λS DIC N2
+sOpticalConfigName,60X SoRa GR 2.8x
+sSpecSettings,Binning: 2x2
+Bit Depth: 16-bit
+Exposure: 100 ms
+Readout Speed: 100.0MHz
+Multiplier: Off
+Temperature: -9.9°C
+
+Conversion Gain: HDR
+Denoising: Off
+Fan Speed: High
+
+sZDrive,Ti2 ZDrive
+size,8
+sizeObjFullChip.cx,0
+sizeObjFullChip.cy,0
+timestamp #001,0.0
+timestamp #002,0.0
+timestamp #003,0.0
+timestamp #004,0.07587639999762177
+timestamp #005,0.17594839999824763
+timestamp #006,0.27602039999887346
+timestamp #007,0.37609239999949934
+timestamp #008,0.47616440000012517
+timestamp #009,0.576236400000751
+timestamp #010,0.6763083999976516
+timestamp #011,0.7763803999982775
+timestamp #012,0.8764523999989032
+timestamp #013,0.9765243999995291
+timestamp #014,1.0765964000001549
+timestamp #015,1.1766684000007808
+timestamp #016,1.2767403999976814
+timestamp #017,1.3768123999983073
+timestamp #018,1.4768843999989332
+timestamp #019,1.5769563999995588
+timestamp #020,1.6770284000001847
+timestamp #021,1.7771004000008106
+timestamp #022,1.8771723999977112
+timestamp #023,1.9772443999983371
+timestamp #024,2.077316399998963
+timestamp #025,2.1773883999995887
+timestamp #026,2.2774604000002148
+timestamp #027,2.3775324000008404
+timestamp #028,2.477604399997741
+timestamp #029,2.5776763999983667
+timestamp #030,2.677748399998993
+timestamp #031,2.7778203999996185
+timestamp #032,2.8778924000002446
+timestamp #033,2.9779644000008703
+timestamp #034,3.078036399997771
+timestamp #035,3.1781083999983966
+timestamp #036,3.2781803999990227
+timestamp #037,3.3782523999996483
+timestamp #038,3.478324400000274
+timestamp #039,3.5783964000009
+timestamp #040,3.6784683999978007
+timestamp #041,3.7785403999984264
+timestamp #042,3.8786123999990525
+timestamp #043,3.978684399999678
+timestamp #044,4.078756400000304
+timestamp #045,4.1788284000009295
+timestamp #046,4.278900399997831
+timestamp #047,4.378972399998457
+timestamp #048,4.479044399999082
+timestamp #049,4.579116399999708
+timestamp #050,4.679188400000334
+timestamp #051,4.779260400000959
+timestamp #052,4.87933239999786
+timestamp #053,4.979404399998486
+timestamp #054,5.079476399999112
+timestamp #055,5.179548399999738
+timestamp #056,5.279620400000364
+timestamp #057,5.379692400000989
+timestamp #058,5.47976439999789
+timestamp #059,5.579836399998515
+timestamp #060,5.6799083999991415
+timestamp #061,5.779980399999768
+timestamp #062,5.880052400000394
+timestamp #063,5.980124400001019
+timestamp #064,6.08019639999792
+timestamp #065,6.180268399998545
+timestamp #066,6.280340399999171
+timestamp #067,6.3804123999997975
+timestamp #068,6.480484400000424
+timestamp #069,6.580556399997324
+timestamp #070,6.68062839999795
+timestamp #071,6.780700399998575
+timestamp #072,6.880772399999201
+timestamp #073,6.980844399999827
+timestamp #074,7.080916400000453
+timestamp #075,7.180988399997354
+timestamp #076,7.28106039999798
+timestamp #077,7.381132399998605
+timestamp #078,7.481204399999231
+timestamp #079,7.581276399999857
+timestamp #080,7.681348400000482
+timestamp #081,7.781420399997383
+timestamp #082,7.8814923999980095
+timestamp #083,7.981564399998635
+timestamp #084,8.081636399999262
+timestamp #085,8.181708399999886
+timestamp #086,8.281780400000512
+timestamp #087,8.381852399997413
+timestamp #088,8.48192439999804
+timestamp #089,8.581996399998665
+timestamp #090,8.682068399999292
+timestamp #091,8.782140399999916
+timestamp #092,8.882212400000542
+timestamp #093,8.982284399997443
+timestamp #094,9.08235639999807
+timestamp #095,9.182428399998695
+timestamp #096,9.28250039999932
+timestamp #097,9.382572399999946
+timestamp #098,9.482644400000572
+timestamp #099,9.582716399997473
+timestamp #100,9.682788399998099
+timestamp #101,9.782860399998725
+timestamp #102,9.88293239999935
+timestamp #103,9.983004399999976
+timestamp #104,10.083076400000602
+timestamp #105,10.183148399997503
+timestamp #106,10.283220399998129
+timestamp #107,10.383292399998755
+timestamp #108,10.48336439999938
+timestamp #109,10.583436400000005
+timestamp #110,10.683508400000632
+timestamp #111,10.783580399997533
+timestamp #112,10.883652399998159
+timestamp #113,10.983724399998785
+timestamp #114,11.08379639999941
+timestamp #115,11.183868400000035
+timestamp #116,11.283940400000661
+timestamp #117,11.384012399997562
+timestamp #118,11.484084399998189
+timestamp #119,11.584156399998815
+timestamp #120,11.684228399999439
+timestamp #121,11.784300400000065
+timestamp #122,11.884372400000691
+timestamp #123,11.984444399997592
+timestamp #124,12.084516399998218
+timestamp #125,12.184588399998844
+timestamp #126,12.284660399999469
+timestamp #127,12.384732400000095
+timestamp #128,12.484804400000721
+timestamp #129,12.584876399997622
+timestamp #130,12.684948399998248
+timestamp #131,12.785020399998874
+timestamp #132,12.885092399999499
+timestamp #133,12.985164400000125
+timestamp #134,13.08523640000075
+timestamp #135,13.185308399997652
+timestamp #136,13.285380399998278
+timestamp #137,13.385452399998904
+timestamp #138,13.485524399999528
+timestamp #139,13.585596400000155
+timestamp #140,13.68566840000078
+timestamp #141,13.785740399997682
+timestamp #142,13.885812399998308
+timestamp #143,13.985884399998934
+timestamp #144,14.085956399999558
+timestamp #145,14.186028400000184
+timestamp #146,14.28610040000081
+timestamp #147,14.386172399997712
+timestamp #148,14.486244399998338
+timestamp #149,14.586316399998962
+timestamp #150,14.686388399999588
+top,512
+uiBkgndSize,0
+uiBpc,16
+uiBpcInMemory,16
+uiBpcSignificant,16
+uiColor,65316
+uiColorCustom,65280
+uiColorGroup,65280
+uiColorSpace,4
+uiComp,2
+uiCompCount,1
+uiCon20(L,0
+uiCount,150
+uiDenOffset,0
+uiDenom,1
+uiFQModeUsage,3
+uiFlags,0
+uiGradient,0
+uiGradientBrightField,0
+uiGroup,0
+uiGroupCount,2
+uiHeight,512
+uiInterpretation,4
+uiLutComponentCount,2
+uiMaxSrc,65535
+uiMinDst,0
+uiMinSrc,0
+uiModalityMask,1073742849
+uiModeFQ,2
+uiNextLevelCount,0
+uiNumOffset,0
+uiNumer,0
+uiOCTypeKey,15
+uiOpticalConfigs,1
+uiPhysicalVarCount,0
+uiPointCoint,0
+uiRepeatCount,1
+uiRepresentation,0
+uiRow,0
+uiSampleCount,1
+uiSampleIndex,0
+uiSequenceCount,150
+uiSpectralColorMode,0
+uiTaskCount,0
+uiTileHeight,512
+uiTileWidth,512
+uiUsageFlags,1
+uiValues,2
+uiVirtualComponents,2
+uiWidth,512
+uiWidthBytes,2048
+vGrabberCameraSettingsFQMode,1
+vecIdsSize,0
+wsApplicationDesc,ND Acquisition
+wsCameraName,PVCAM Dual Prime BSI
+wsObjectiveCode,MRD71600
+wsObjectiveName,Apo 60x Oil λS DIC N2
+wsRDKey,Z1
+wstrSystemUUID,221ae2d32b4f48a0bf5091eb311a750f
+wszFormatDesc,Binning 2x2 (100.0 FPS)
+wszFormatText,Binning 2x2
+wszUniqueName,FMT 2x2 16-bit
