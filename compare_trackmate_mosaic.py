@@ -4,7 +4,7 @@ compare_trackmate_mosaic.py
 Cross-validate Mosaic vs TrackMate diffusion coefficients on the same embryos.
 
 For each embryo where both Traj_<name>.csv (Mosaic) and
-Traj_<name>_trackmate.csv (TrackMate, from parse_trackmate_xml.py) exist,
+Traj_<name>_trackmate.csv (TrackMate, from parse_trackmate_csv.py) exist,
 computes per-track D from MSD linear fit and reports per-embryo median D.
 
 Usage:
@@ -111,7 +111,7 @@ def main():
     pairs  = list(find_pairs(folder))
     if not pairs:
         sys.exit("No matched Mosaic/TrackMate CSV pairs found.\n"
-                 "Run parse_trackmate_xml.py first to generate Traj_*_trackmate.csv files.")
+                 "Run parse_trackmate_csv.py first to generate Traj_*_trackmate.csv files.")
 
     print(f"Found {len(pairs)} matched embryo(s).\n")
     header = f"{'Embryo':<32} {'Mosaic med D':>13} {'TM med D':>10} "    \
