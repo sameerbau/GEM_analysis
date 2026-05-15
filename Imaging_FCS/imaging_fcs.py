@@ -140,20 +140,18 @@ def collect_tiff_movies(folder: Path) -> list[Path]:
 
 # ── Preprocessing ─────────────────────────────────────────────────────────────
 
-def correct_bleaching(movie: np.ndarray, degree: int = 2) -> np.ndarray:
+def correct_bleaching(movie: np.ndarray) -> np.ndarray:
     """
-    Fit a polynomial to the per-frame median intensity and normalise each frame.
+    Divide each frame by its spatial mean, normalised to frame 0.
 
-    Polynomial fitting is more robust than per-frame division: a single bright
-    artefact frame can inflate the direct divisor and create a dip artefact in
-    the corrected movie, whereas the polynomial smooths over such outliers.
+    Using the per-frame mean (rather than median) is intentional: after
+    subtracting the per-pixel background the frame median is close to zero
+    (most pixels are dark), so fitting a polynomial to medians produces a
+    near-flat trend that fails to correct bleaching. The mean tracks the
+    total GEM signal and correctly compensates the slow exponential decay.
     """
-    T = movie.shape[0]
-    t = np.arange(T, dtype=np.float64)
-    frame_medians = np.median(movie.reshape(T, -1), axis=1)  # (T,) — robust
-    coeffs = np.polyfit(t, frame_medians, degree)
-    trend  = np.polyval(coeffs, t).clip(min=1e-6)            # smooth trend
-    norm   = trend[0] / trend                                 # scale to frame-0 level
+    frame_means = movie.mean(axis=(1, 2)).clip(min=1e-6)  # (T,)
+    norm = frame_means[0] / frame_means
     return movie * norm[:, np.newaxis, np.newaxis]
 
 
@@ -440,7 +438,7 @@ def compute_d_map(movie: np.ndarray,
                                        lag_min=lag_min, lag_max=lag_max)
                 d  = res["D"]
                 r2 = res["r2"]
-                if np.isfinite(d) and 1e-5 < d < 10.0 and (np.isnan(r2) or r2 > 0.3):
+                if np.isfinite(d) and 1e-5 < d < 10.0:
                     D_map[iy, ix] = d
             except Exception:
                 pass
@@ -579,15 +577,8 @@ def _compute_d_map_gpu(movie: np.ndarray,
     intercept = np.where(good, (Sw_ * St2 - St * Stw) / np.where(good, det, 1.0), np.nan)
     D_vals = slope / 4.0
 
-    # R² of the per-tile iMSD line fit: exclude tiles with poor linearity
-    w2v_hat = slope[np.newaxis] * tv_b + intercept[np.newaxis]
-    ss_res  = np.where(fin, (w2v - w2v_hat) ** 2, 0.0).sum(axis=0)
-    w2v_bar = np.where(fin, Sw_[np.newaxis] / np.maximum(n_v[np.newaxis], 1), 0.0)
-    ss_tot  = np.where(fin, (w2v - w2v_bar) ** 2, 0.0).sum(axis=0)
-    tile_r2 = np.where((ss_tot > 0) & good, 1.0 - ss_res / ss_tot, np.nan)
-
     D_vals = np.where(
-        good & ~empty & (D_vals > 1e-5) & (D_vals < 10.0) & (tile_r2 > 0.3),
+        good & ~empty & (D_vals > 1e-5) & (D_vals < 10.0),
         D_vals, np.nan,
     )
     n_valid = int(np.isfinite(D_vals).sum())
