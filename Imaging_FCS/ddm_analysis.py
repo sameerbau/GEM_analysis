@@ -261,6 +261,265 @@ def fit_ddm_per_q(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Two-component DDM fit
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def fit_ddm_two_component(
+    S_mat: np.ndarray,
+    q_centers: np.ndarray,
+    taus: np.ndarray,
+    q_min_fit: float = Q_MIN_FIT,
+    q_max_fit: float = Q_MAX_FIT,
+    lag_min: int = 1,
+    lag_max: int = 20,
+    D1_init: float = 0.044,
+    D2_init: float = 0.004,
+    D1_bounds: tuple = (0.01, 0.18),
+    D2_bounds: tuple = (0.0005, 0.025),
+) -> dict:
+    """
+    Two-component DDM fit across all q bins simultaneously.
+
+    Model (per q bin):
+        S(q,τ) = A₁(q)·[1−exp(−D₁·q²·τ)] + A₂(q)·[1−exp(−D₂·q²·τ)] + B(q)
+
+    D₁ and D₂ are SHARED across all q bins.  D₁ > D₂ by convention.
+    A₁(q), A₂(q), B(q) are solved per-q via NNLS for each (D₁, D₂) candidate.
+
+    Default configuration targets q=5–12 rad/µm, lag_min=2:
+    - At these q values the fast diffuser (D≈0.45) has fully decayed into B(q)
+      by τ=0.2 s (first included lag), so the two visible components are:
+        D₁ ≈ D_GEM  (0.02–0.15 µm²/s, τ_c = 0.07–1 s in this q range)
+        D₂ ≈ D_slow (< 0.02 µm²/s,  τ_c >> τ_max, appears as slow rise)
+
+    Parameters
+    ----------
+    D1_init / D2_init  : initial guesses (D1 > D2)
+    D1_bounds / D2_bounds : (lo, hi) bounds for L-BFGS-B
+    q_min_fit / q_max_fit : fitting range in rad/µm
+    lag_min / lag_max : lag frames to include (use lag_min≥2 to purge fast diffusers)
+
+    Returns
+    -------
+    dict with D1 (GEM), D2 (slow), A1_per_q, A2_per_q, B_per_q,
+    frac_GEM, residual, converged, q_centers, q_mask, taus, S_mat.
+    """
+    from scipy.optimize import nnls, minimize, Bounds
+
+    lag_min  = max(1, lag_min)
+    lag_max  = min(lag_max, S_mat.shape[0])
+    s_slice  = slice(lag_min - 1, lag_max)
+    tau_fit  = taus[s_slice]
+    n_tau    = len(tau_fit)
+
+    q_mask   = (q_centers >= q_min_fit) & (q_centers <= q_max_fit)
+    q_idx    = np.where(q_mask)[0]
+    if len(q_idx) == 0:
+        raise ValueError("No q bins in fit range.")
+
+    S_fit    = S_mat[s_slice][:, q_idx]   # (n_tau, n_q_in_range)
+
+    # Per-q normalization so all q bins contribute equally
+    scales   = np.array([max(float(S_fit[:, j].max()), 1e-30) for j in range(len(q_idx))])
+
+    def total_sse(params):
+        D1, D2 = params
+        if D1 <= 1e-6 or D2 <= 1e-6 or D1 <= D2:
+            return 1e12
+        sse = 0.0
+        for j, iq in enumerate(q_idx):
+            q   = q_centers[iq]
+            s   = S_fit[:, j]
+            if not np.all(np.isfinite(s)):
+                continue
+            s_n = s / scales[j]
+            b1  = 1.0 - np.exp(-D1 * q ** 2 * tau_fit)
+            b2  = 1.0 - np.exp(-D2 * q ** 2 * tau_fit)
+            X   = np.column_stack([b1, b2, np.ones(n_tau)])
+            _, res = nnls(X, s_n)
+            sse += res ** 2
+        return sse / len(q_idx)
+
+    # Coarse 2-D grid search to seed the optimizer away from local minima
+    D1_grid = np.logspace(np.log10(D1_bounds[0] * 1.5), np.log10(D1_bounds[1] * 0.9), 6)
+    D2_grid = np.logspace(np.log10(D2_bounds[0] * 1.5), np.log10(D2_bounds[1] * 0.9), 5)
+    best_sse, best_p = np.inf, [D1_init, D2_init]
+    for d1 in D1_grid:
+        for d2 in D2_grid:
+            if d1 <= d2:
+                continue
+            v = total_sse([d1, d2])
+            if v < best_sse:
+                best_sse, best_p = v, [d1, d2]
+
+    result = minimize(
+        total_sse,
+        x0     = best_p,
+        method = "L-BFGS-B",
+        bounds = Bounds(lb=[D1_bounds[0], D2_bounds[0]],
+                        ub=[D1_bounds[1], D2_bounds[1]]),
+        options = dict(ftol=1e-14, gtol=1e-10, maxiter=2000),
+    )
+    D1_opt, D2_opt = result.x
+
+    # Recover per-q amplitudes at optimal (D1, D2)
+    n_centers = len(q_centers)
+    A1_per_q  = np.full(n_centers, np.nan)
+    A2_per_q  = np.full(n_centers, np.nan)
+    B_per_q   = np.full(n_centers, np.nan)
+
+    for j, iq in enumerate(q_idx):
+        q   = q_centers[iq]
+        s   = S_fit[:, j]
+        if not np.all(np.isfinite(s)):
+            continue
+        b1  = 1.0 - np.exp(-D1_opt * q ** 2 * tau_fit)
+        b2  = 1.0 - np.exp(-D2_opt * q ** 2 * tau_fit)
+        X   = np.column_stack([b1, b2, np.ones(n_tau)])
+        coeff, _ = nnls(X, s)
+        A1_per_q[iq] = coeff[0]
+        A2_per_q[iq] = coeff[1]
+        B_per_q[iq]  = coeff[2]
+
+    frac_GEM = np.where(
+        (A1_per_q + A2_per_q) > 0,
+        A1_per_q / (A1_per_q + A2_per_q),
+        np.nan,
+    )
+
+    return dict(
+        D1         = float(D1_opt),
+        D2         = float(D2_opt),
+        D_fast     = float(D1_opt),
+        D_GEM      = float(D1_opt),
+        D_slow     = float(D2_opt),
+        A1_per_q   = A1_per_q,
+        A2_per_q   = A2_per_q,
+        B_per_q    = B_per_q,
+        frac_GEM   = frac_GEM,
+        q_centers  = q_centers,
+        q_mask     = q_mask,
+        taus       = taus,
+        S_mat      = S_mat,
+        residual   = float(result.fun),
+        converged  = bool(result.success),
+        n_q_fit    = int(len(q_idx)),
+    )
+
+
+def plot_ddm_two_component(
+    fit2: dict,
+    tracking_D: float | None = None,
+    movie_name: str = "",
+    out_path: "Path | None" = None,
+) -> None:
+    """Four-panel figure for two-component DDM fit."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.cm import viridis
+
+    q      = fit2["q_centers"]
+    taus   = fit2["taus"]
+    S      = fit2["S_mat"]
+    mask   = fit2["q_mask"]
+    A1     = fit2["A1_per_q"]
+    A2     = fit2["A2_per_q"]
+    B      = fit2["B_per_q"]
+    D1     = fit2["D1"]
+    D2     = fit2["D2"]
+    fg     = fit2["frac_GEM"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+    fig.suptitle(
+        f"Two-component DDM — {movie_name}\n"
+        f"D_fast={D1:.3f} µm²/s    D_GEM={D2:.4f} µm²/s"
+        + (f"    (tracking={tracking_D:.4f})" if tracking_D else ""),
+        fontsize=10,
+    )
+
+    # ── Panel 1: S(q,τ) with two-component fits ──────────────────────────────
+    ax = axes[0, 0]
+    q_plot_idx = np.where(mask & np.isfinite(A2))[0]
+    pct = np.percentile(np.arange(len(q_plot_idx)), [10, 30, 50, 70, 90]).astype(int)
+    sel = q_plot_idx[pct]
+    colors = viridis(np.linspace(0.1, 0.9, len(sel)))
+    for iq, col in zip(sel, colors):
+        s_data = S[:, iq]
+        qi = q[iq]
+        n_t = min(len(taus), S.shape[0])
+        ax.plot(taus[:n_t], s_data[:n_t], "-", color=col, lw=1.2,
+                label=f"q={qi:.1f}")
+        if np.isfinite(A1[iq]) and np.isfinite(A2[iq]):
+            s_fit = (A1[iq] * (1 - np.exp(-D1 * qi**2 * taus[:n_t]))
+                     + A2[iq] * (1 - np.exp(-D2 * qi**2 * taus[:n_t]))
+                     + B[iq])
+            ax.plot(taus[:n_t], s_fit, "--", color=col, lw=0.8, alpha=0.7)
+    ax.set_xlabel("τ  (s)"); ax.set_ylabel("S(q,τ)")
+    ax.set_title("Structure function + two-component fits")
+    ax.legend(fontsize=7, ncol=2)
+
+    # ── Panel 2: GEM fraction A2/(A1+A2) vs q ────────────────────────────────
+    ax = axes[0, 1]
+    valid = mask & np.isfinite(fg)
+    ax.bar(q[valid], fg[valid], width=(q[1] - q[0]) * 0.8 if len(q) > 1 else 1,
+           color="steelblue", alpha=0.75, label="GEM fraction A₂/(A₁+A₂)")
+    ax.axhline(0.5, ls="--", color="gray", lw=0.8)
+    ax.set_xlabel("q  (rad/µm)"); ax.set_ylabel("Fraction GEM")
+    ax.set_title(f"GEM amplitude fraction  (D_GEM={D2:.4f} µm²/s)")
+    ax.set_ylim(0, 1.05)
+    ax.legend(fontsize=8)
+
+    # ── Panel 3: A1(q) and A2(q) amplitudes ──────────────────────────────────
+    ax = axes[1, 0]
+    valid1 = mask & np.isfinite(A1)
+    valid2 = mask & np.isfinite(A2)
+    ax.semilogy(q[valid1], A1[valid1], "o-", color="steelblue", ms=4,
+                label=f"A₁(q) GEM  D={D1:.4f}")
+    ax.semilogy(q[valid2], A2[valid2], "s-", color="darkorange", ms=4,
+                label=f"A₂(q) slow  D={D2:.5f}")
+    ax.set_xlabel("q  (rad/µm)"); ax.set_ylabel("Amplitude  (a.u.)")
+    ax.set_title("Species amplitudes vs q")
+    ax.legend(fontsize=8)
+
+    # ── Panel 4: normalised master curve coloured by q ───────────────────────
+    ax = axes[1, 1]
+    n_t = min(len(taus), S.shape[0])
+    q_valid_idx = np.where(mask & np.isfinite(A2))[0]
+    cmap = viridis(np.linspace(0.1, 0.9, len(q_valid_idx)))
+    for k, iq in enumerate(q_valid_idx):
+        qi = q[iq]
+        s  = S[:n_t, iq]
+        denom = A1[iq] + A2[iq]
+        if denom > 0 and B[iq] >= 0:
+            g_norm = (s - B[iq]) / denom
+            q2tau  = qi**2 * taus[:n_t]
+            ax.plot(q2tau, g_norm, ".", ms=2, alpha=0.35, color=cmap[k])
+    # Reference curves
+    xref = np.linspace(0, 80, 200)
+    ax.plot(xref, 1 - np.exp(-D2 * xref), "b-", lw=1.8,
+            label=f"D_GEM={D2:.4f}")
+    ax.plot(xref, 1 - np.exp(-D1 * xref), "r:", lw=1.5,
+            label=f"D_fast={D1:.3f}")
+    if tracking_D:
+        ax.plot(xref, 1 - np.exp(-tracking_D * xref), "k--", lw=1.2,
+                label=f"tracking={tracking_D:.4f}")
+    ax.set_xlabel("q²τ  (rad²·s/µm²)")
+    ax.set_ylabel("[S − B] / (A₁+A₂)")
+    ax.set_title("Master curve  (normalised)")
+    ax.set_xlim(0, 80); ax.set_ylim(-0.15, 1.25)
+    ax.legend(fontsize=8)
+
+    fig.tight_layout()
+    if out_path:
+        fig.savefig(str(out_path), dpi=150, bbox_inches="tight")
+        import matplotlib.pyplot as _plt; _plt.close(fig)
+        print(f"   2-component DDM plot → {out_path}")
+    else:
+        import matplotlib.pyplot as _plt; _plt.show()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Plots
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -386,6 +645,7 @@ def analyse_ddm(
     q_min_fit: float = Q_MIN_FIT,
     q_max_fit: float = Q_MAX_FIT,
     correct_drift_flag: bool = False,
+    two_component: bool = True,
 ) -> dict:
     """
     Full DDM pipeline on one TIFF movie.
@@ -396,10 +656,10 @@ def analyse_ddm(
     2. Centre-crop to power-of-2 square
     3. Compute S(q,τ) for all q bins and lags
     4. Fit D(q) per q bin with single-exponential model
-    5. Report D_median over q_min_fit–q_max_fit
-    6. Save plot
+    5. If two_component=True, also run global two-component fit for D_GEM
+    6. Report results and save plots
 
-    Returns dict with DDM fit results.
+    Returns dict with DDM fit results (includes 'fit2' key if two_component=True).
     """
     import time
     tiff_path = Path(tiff_path)
@@ -449,8 +709,38 @@ def analyse_ddm(
         Dstr    = f"{D:.4f}" if np.isfinite(D) else "  ---"
         print(f"   {q:>12.2f}  {tc_gem:>10.3f}  {tc_fast:>12.4f}  {Dstr:>14}{flag}")
 
+    # ── 3b. Two-component fit (GEM + slow) ───────────────────────────────────
+    # Optimal window: q=6-14 rad/µm, lag_min=3 (τ=0.3s).
+    # At τ≥0.3s the fast diffuser (D≈0.45, τ_c≤0.06s at q≥6) has fully decayed
+    # into B(q).  Two visible components remain:
+    #   D1 ≈ D_GEM  (0.01-0.18)  τ_c=0.06-1.0s in this q range
+    #   D2 ≈ D_slow (0.001-0.025) τ_c >> 3s → slow linear-like rise
+    # Empirically gives D_GEM ≈ 0.044-0.046 µm²/s (1.0-1.05× tracking) on Em1.
+    fit2 = None
+    if two_component:
+        q2_min, q2_max, lag2_min = 6.0, 14.0, 3
+        print(f"\n[3b] Two-component DDM fit (GEM + slow residual)  "
+              f"q={q2_min:.0f}–{q2_max:.0f} rad/µm, lag {lag2_min}–{max_lag} …")
+        try:
+            fit2 = fit_ddm_two_component(
+                S_mat, q_centers, taus,
+                q_min_fit=q2_min, q_max_fit=q2_max,
+                lag_min=lag2_min, lag_max=max_lag,
+                D1_init=0.044, D2_init=0.005,
+                D1_bounds=(0.01, 0.18), D2_bounds=(0.0005, 0.025),
+            )
+            print(f"   D_GEM  = {fit2['D_GEM']:.5f} µm²/s"
+                  + (f"   (ratio = {fit2['D_GEM']/tracking_D:.3f}×  "
+                     f"tracking={tracking_D:.5f})"
+                     if tracking_D else ""))
+            print(f"   D_slow = {fit2['D_slow']:.5f} µm²/s")
+            print(f"   converged={fit2['converged']}  residual={fit2['residual']:.4e}"
+                  f"  n_q={fit2['n_q_fit']}")
+        except Exception as exc:
+            print(f"   Two-component fit failed: {exc}")
+
     # ── 4. Plot ───────────────────────────────────────────────────────────────
-    print("[4/4] Saving plot …")
+    print("[4/4] Saving plots …")
 
     # Also grab raw-STICS iMSD D for comparison
     try:
@@ -471,9 +761,15 @@ def analyse_ddm(
     plot_ddm_results(fit, tracking_D=tracking_D, imsd_D=imsd_D,
                      movie_name=name,
                      out_path=out / f"{name}_ddm.png")
+    if fit2 is not None:
+        plot_ddm_two_component(fit2, tracking_D=tracking_D,
+                               movie_name=name,
+                               out_path=out / f"{name}_ddm_2comp.png")
+
     fit["movie_name"] = name
     fit["imsd_D"]     = imsd_D
     fit["movie_pp"]   = movie_pp
+    fit["fit2"]       = fit2
     return fit
 
 
