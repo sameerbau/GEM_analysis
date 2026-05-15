@@ -137,6 +137,38 @@ def preprocess(movie: np.ndarray) -> np.ndarray:
     return movie
 
 
+def _fft_crop(movie: np.ndarray) -> np.ndarray:
+    """Crop to the largest power-of-2 square centred on the image.
+
+    rfft2 on 998×998 (= 2×499, prime) is ~10× slower than on 512×512.
+    Cropping is only done for the global iMSD; tiled analysis uses the
+    full movie and is unaffected (tiles are always 64×64 = 2⁶).
+    """
+    T, Y, X = movie.shape
+    side = 1 << int(np.floor(np.log2(min(Y, X))))  # largest power of 2 ≤ min dim
+    y0   = (Y - side) // 2
+    x0   = (X - side) // 2
+    return movie[:, y0: y0 + side, x0: x0 + side]
+
+
+def _align_mask(mask: np.ndarray, target_shape: tuple) -> np.ndarray:
+    """Match ER mask to (Y, X) by centre-crop then zero-pad if needed.
+
+    Handles the common case where the mask and the movie were acquired at
+    different binning or saved at different sizes (e.g. 998 vs 512).
+    """
+    H, W   = target_shape
+    mH, mW = mask.shape
+    y0 = max(0, (mH - H) // 2)
+    x0 = max(0, (mW - W) // 2)
+    cropped = mask[y0: y0 + min(mH, H), x0: x0 + min(mW, W)]
+    if cropped.shape == (H, W):
+        return cropped
+    padded = np.zeros((H, W), dtype=mask.dtype)
+    padded[: cropped.shape[0], : cropped.shape[1]] = cropped
+    return padded
+
+
 # ── STICS core ────────────────────────────────────────────────────────────────
 
 def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG) -> np.ndarray:
@@ -393,14 +425,14 @@ def _er_contour(ax, er_mask, D_or_N_map, tile_px, pixel_um, use_tile_coords=Fals
         return
     H, W = D_or_N_map.shape
     if use_tile_coords:
-        # D map: downsample ER mask to tile grid
-        er_crop = er_mask[: H * tile_px, : W * tile_px]
-        er_ds   = er_crop.reshape(H, tile_px, W, tile_px).mean(axis=(1, 3))
+        # D map: align mask to the pixel footprint of the tile grid, then downsample
+        er_full = _align_mask(er_mask, (H * tile_px, W * tile_px))
+        er_ds   = er_full.reshape(H, tile_px, W, tile_px).mean(axis=(1, 3))
         xs = np.linspace(0, W * tile_px * pixel_um, W)
         ys = np.linspace(0, H * tile_px * pixel_um, H)
     else:
-        # N/B map: full-resolution ER mask cropped to match
-        er_ds = er_mask[: H, : W]
+        # N/B map: align mask to full movie frame size
+        er_ds = _align_mask(er_mask, (H, W))
         xs = np.linspace(0, W * pixel_um, W)
         ys = np.linspace(0, H * pixel_um, H)
 
@@ -532,9 +564,9 @@ def plot_nb(N_map: np.ndarray, B_map: np.ndarray,
 
 def _print_er_comparison(D_map, er_mask, tile_px):
     """Print median D inside vs outside ER tiles."""
-    ny, nx = D_map.shape
-    er_crop = er_mask[: ny * tile_px, : nx * tile_px]
-    er_ds   = er_crop.reshape(ny, tile_px, nx, tile_px).mean(axis=(1, 3)) > 0.5
+    ny, nx  = D_map.shape
+    er_full = _align_mask(er_mask, (ny * tile_px, nx * tile_px))
+    er_ds   = er_full.reshape(ny, tile_px, nx, tile_px).mean(axis=(1, 3)) > 0.5
     D_in    = D_map[er_ds & np.isfinite(D_map)]
     D_out   = D_map[~er_ds & np.isfinite(D_map)]
     print(f"   D inside  ER: median={np.nanmedian(D_in):.4f}  n={len(D_in)}")
@@ -583,7 +615,11 @@ def analyse_movie(tiff_path: Path,
 
     # ── 1. Global iMSD ────────────────────────────────────────────────────────
     print("   [1/3] Global STICS → iMSD …")
-    acf    = compute_stics(movie, max_lag=max_lag)
+    movie_fft = _fft_crop(movie)
+    if movie_fft.shape[1] != Y or movie_fft.shape[2] != X:
+        print(f"   FFT crop: {Y}×{X} → {movie_fft.shape[1]}×{movie_fft.shape[2]} px "
+              f"(centre crop to power-of-2 for speed)")
+    acf    = compute_stics(movie_fft, max_lag=max_lag)
     result = compute_imsd(acf, pixel_um=pixel_um, dt=dt,
                           lag_min=lag_min, lag_max=lag_max)
 
