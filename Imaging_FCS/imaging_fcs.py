@@ -161,10 +161,70 @@ def subtract_background(movie: np.ndarray, percentile: float = 5) -> np.ndarray:
     return np.maximum(movie - bg[np.newaxis], 0.0)
 
 
-def preprocess(movie: np.ndarray) -> np.ndarray:
+def correct_drift(movie: np.ndarray, max_shift_px: int = 20) -> tuple:
+    """
+    Rigid sub-pixel drift correction via phase cross-correlation.
+
+    Translational drift during a 30s spinning-disk acquisition (even fractions
+    of a pixel per frame) shifts the STICS ACF peak away from (0,0) at large τ,
+    producing an apparent V-shaped iMSD — w² rises then falls as the peak exits
+    the Gaussian-fit window.  Correcting drift before STICS is the single most
+    effective fix for the negative/non-monotonic iMSD problem.
+
+    Parameters
+    ----------
+    movie        : (T, Y, X) float32, after bleaching correction
+    max_shift_px : reject frame-to-frame shifts larger than this (likely artefacts)
+
+    Returns
+    -------
+    corrected : (T, Y, X) drift-corrected movie (integer-pixel shifts only)
+    shifts    : (T, 2) array of (dy, dx) shifts relative to frame 0
+    """
+    T, Y, X = movie.shape
+    shifts = np.zeros((T, 2), dtype=np.float32)
+    out    = np.empty_like(movie)
+    out[0] = movie[0]
+
+    cum_dy, cum_dx = 0.0, 0.0
+    for t in range(1, T):
+        # Compare consecutive RAW frames to measure the incremental frame-to-frame
+        # shift only — do not compare corrected vs raw, which gives absolute shifts
+        # and double-counts when accumulated.
+        prev_fft = np.fft.fft2(movie[t - 1])
+        cur_fft  = np.fft.fft2(movie[t])
+        cross    = prev_fft * np.conj(cur_fft)
+        # Raw cross-correlation: more reliable than phase-only at integer resolution
+        cc       = np.real(np.fft.ifft2(cross))
+        cc       = np.fft.fftshift(cc)
+        peak     = np.unravel_index(cc.argmax(), cc.shape)
+        dy       = peak[0] - Y // 2
+        dx       = peak[1] - X // 2
+        # reject implausibly large single-frame jumps (artefact/blank frames)
+        if abs(dy) > max_shift_px or abs(dx) > max_shift_px:
+            dy, dx = 0, 0
+        cum_dy += dy; cum_dx += dx
+        shifts[t] = [cum_dy, cum_dx]
+        # dx = -(true rightward shift per frame), so rolling by cum_dx undoes it
+        out[t] = np.roll(np.roll(movie[t], int(round(cum_dy)), axis=0),
+                         int(round(cum_dx)), axis=1)
+    return out, shifts
+
+
+def preprocess(movie: np.ndarray, correct_drift_flag: bool = True) -> tuple:
+    """
+    Full preprocessing pipeline.
+
+    Returns (processed_movie, shifts) where shifts is (T,2) drift trajectory.
+    shifts is all-zeros if correct_drift_flag=False.
+    """
     movie = correct_bleaching(movie)
     movie = subtract_background(movie)
-    return movie
+    if correct_drift_flag:
+        movie, shifts = correct_drift(movie)
+    else:
+        shifts = np.zeros((movie.shape[0], 2), dtype=np.float32)
+    return movie, shifts
 
 
 def _fft_crop(movie: np.ndarray) -> np.ndarray:
@@ -794,7 +854,8 @@ def analyse_movie(tiff_path: Path,
                   lag_min: int = LAG_MIN,
                   lag_max: int = LAG_MAX,
                   camera: str = "sCMOS",
-                  use_gpu: bool = False) -> dict:
+                  use_gpu: bool = False,
+                  correct_drift_flag: bool = True) -> dict:
     name  = tiff_path.stem
     out   = out_dir or (tiff_path.parent / "imfcs_results")
     out.mkdir(parents=True, exist_ok=True)
@@ -808,7 +869,15 @@ def analyse_movie(tiff_path: Path,
     print(f"   {T} frames × {Y}×{X} px  "
           f"({Y * pixel_um:.1f}×{X * pixel_um:.1f} µm  |  {T * dt:.1f} s total)")
 
-    movie = preprocess(movie)
+    movie, drift_shifts = preprocess(movie, correct_drift_flag=correct_drift_flag)
+    max_drift = float(np.hypot(drift_shifts[:, 0], drift_shifts[:, 1]).max())
+    print(f"   Drift correction: max cumulative shift = {max_drift:.1f} px "
+          f"({max_drift * pixel_um:.3f} µm)")
+    if max_drift > 5:
+        warnings.warn(
+            f"Large sample drift detected ({max_drift:.1f} px = {max_drift*pixel_um:.2f} µm). "
+            "iMSD results may still be affected at large lags. "
+            "Consider also reducing LAG_MAX.", stacklevel=2)
 
     # Warn if PSF likely sub-pixel (common misconfiguration)
     psf_expected_um = 0.25                                 # typical for NA≥1
@@ -821,7 +890,8 @@ def analyse_movie(tiff_path: Path,
         )
 
     summary: dict = dict(movie=name, pixel_um=pixel_um, dt=dt,
-                         n_frames=T, tracking_D=tracking_D)
+                         n_frames=T, tracking_D=tracking_D,
+                         max_drift_px=round(max_drift, 2))
 
     # ── 1. Global iMSD ────────────────────────────────────────────────────────
     print("   [1/3] Global STICS → iMSD …")
@@ -895,7 +965,8 @@ def batch_analyse(tiff_dir: Path,
                   lag_min: int = LAG_MIN,
                   lag_max: int = LAG_MAX,
                   camera: str = "sCMOS",
-                  use_gpu: bool = False) -> pd.DataFrame | None:
+                  use_gpu: bool = False,
+                  correct_drift_flag: bool = True) -> pd.DataFrame | None:
     tiffs = collect_tiff_movies(tiff_dir)
     if not tiffs:
         print(f"No TIFF movie stacks found in {tiff_dir}")
@@ -920,7 +991,8 @@ def batch_analyse(tiff_dir: Path,
             s = analyse_movie(tiff, tracking_D=tr_D, out_dir=out,
                               pixel_um=pixel_um, dt=dt, tile_px=tile_px,
                               max_lag=max_lag, lag_min=lag_min, lag_max=lag_max,
-                              camera=camera, use_gpu=use_gpu)
+                              camera=camera, use_gpu=use_gpu,
+                              correct_drift_flag=correct_drift_flag)
             summaries.append(s)
         except Exception as exc:
             print(f"  ERROR on {tiff.name}: {exc}")
@@ -964,6 +1036,8 @@ def _parse_args():
                    help="Camera type (sets N&B noise correction factor)")
     p.add_argument("--gpu", action="store_true", default=False,
                    help="Use GPU acceleration via CuPy (requires CUDA + cupy install)")
+    p.add_argument("--no-drift-correction", action="store_true", default=False,
+                   help="Skip rigid drift correction (useful if movie is already stabilised)")
     return p.parse_args()
 
 
@@ -981,6 +1055,7 @@ if __name__ == "__main__":
         max_lag     = args.max_lag,
         lag_min     = args.fit_lags[0],
         lag_max     = args.fit_lags[1],
-        camera      = args.camera,
-        use_gpu     = args.gpu,
+        camera              = args.camera,
+        use_gpu             = args.gpu,
+        correct_drift_flag  = not args.no_drift_correction,
     )
