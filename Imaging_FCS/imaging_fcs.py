@@ -65,7 +65,10 @@ TILE_PX    = 64      # tile size (pixels) for D heat map  →  ~6 µm at 0.094 �
 MAX_LAG    = 30      # maximum lag (frames) for STICS
 LAG_MIN    = 1       # first lag used in iMSD linear fit  (skip τ=0, shot noise)
 LAG_MAX    = 20      # last  lag used in iMSD linear fit
-FIT_RADIUS = 15      # pixels around STICS centre used for Gaussian fit
+FIT_RADIUS = 10      # pixels around STICS centre used for Gaussian fit
+# PSF w0 ≈ 2.3 px (τ=0), grows to ~7-10 px at τ=20 for D=0.05-0.1 µm²/s.
+# r=10 gives good signal (~15-35 % of peak) at large lags; old r=15 included
+# pure-noise pixels that biased the Gaussian fit and inflated recovered w0.
 
 # Camera noise correction for N&B
 # sCMOS: excess noise factor ≈ 1  |  EMCCD: ≈ 2
@@ -137,13 +140,21 @@ def collect_tiff_movies(folder: Path) -> list[Path]:
 
 # ── Preprocessing ─────────────────────────────────────────────────────────────
 
-def correct_bleaching(movie: np.ndarray) -> np.ndarray:
+def correct_bleaching(movie: np.ndarray, degree: int = 2) -> np.ndarray:
     """
-    Divide each frame by its mean intensity, normalised to frame 0.
-    Removes slow exponential bleaching without distorting spatial patterns.
+    Fit a polynomial to the per-frame median intensity and normalise each frame.
+
+    Polynomial fitting is more robust than per-frame division: a single bright
+    artefact frame can inflate the direct divisor and create a dip artefact in
+    the corrected movie, whereas the polynomial smooths over such outliers.
     """
-    frame_means = movie.mean(axis=(1, 2), keepdims=True).clip(min=1e-6)
-    return movie * (frame_means[0] / frame_means)
+    T = movie.shape[0]
+    t = np.arange(T, dtype=np.float64)
+    frame_medians = np.median(movie.reshape(T, -1), axis=1)  # (T,) — robust
+    coeffs = np.polyfit(t, frame_medians, degree)
+    trend  = np.polyval(coeffs, t).clip(min=1e-6)            # smooth trend
+    norm   = trend[0] / trend                                 # scale to frame-0 level
+    return movie * norm[:, np.newaxis, np.newaxis]
 
 
 def subtract_background(movie: np.ndarray, percentile: float = 5) -> np.ndarray:
@@ -193,7 +204,8 @@ def _align_mask(mask: np.ndarray, target_shape: tuple) -> np.ndarray:
 # ── STICS core ────────────────────────────────────────────────────────────────
 
 def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
-                  use_gpu: bool = False) -> np.ndarray:
+                  use_gpu: bool = False,
+                  intensity_mask_frac: float = 0.10) -> np.ndarray:
     """
     Spatio-temporal image correlation spectroscopy (STICS).
 
@@ -204,9 +216,13 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
 
     Parameters
     ----------
-    movie   : (T, Y, X) float32 array, background-subtracted
-    max_lag : maximum lag in frames
-    use_gpu : use CuPy/CUDA if available (ignored if HAS_GPU is False)
+    movie              : (T, Y, X) float32 array, background-subtracted
+    max_lag            : maximum lag in frames
+    use_gpu            : use CuPy/CUDA if available (ignored if HAS_GPU is False)
+    intensity_mask_frac: zero out pixels whose temporal mean < this fraction of
+                         the brightest 1% mean; removes dark background from the
+                         global ACF so cytoplasm/nuclei don't dilute the signal.
+                         Set to 0 to disable.
 
     Returns
     -------
@@ -217,8 +233,18 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
     T, Y, X = movie.shape
     arr    = xp.asarray(movie, dtype=xp.float32)
     mean_t = arr.mean(axis=0)                              # (Y, X)
+
+    # Spatial intensity mask: exclude dark background pixels
+    if intensity_mask_frac > 0:
+        mn = mean_t.get() if use_gpu and HAS_GPU else np.asarray(mean_t)
+        bright_ref = float(np.percentile(mn, 99))
+        thresh     = intensity_mask_frac * bright_ref
+        imask      = xp.asarray((mn >= thresh).astype(np.float32))
+        arr       *= imask[xp.newaxis]
+        mean_t    *= imask
+
     df     = arr - mean_t[xp.newaxis]; del arr
-    g_mean = float(mean_t.mean())
+    g_mean = float((mean_t.get() if use_gpu and HAS_GPU else np.asarray(mean_t)).mean())
     if g_mean < 1e-6:
         raise ValueError("Near-zero mean after preprocessing — check input data.")
 
@@ -281,7 +307,8 @@ def fit_stics_waist(g_frame: np.ndarray,
     y_data = patch[mask].ravel()
 
     amp0   = float(y_data.max() - y_data.min())
-    w2_0   = max((r / 3.0) ** 2, 1.0)
+    # Initial guess: PSF waist ≈ 2.5 px (≈ 0.235 µm at 0.094 µm/px)
+    w2_0   = max(6.0, 1.0)
     off0   = float(y_data.min())
 
     try:
@@ -290,7 +317,7 @@ def fit_stics_waist(g_frame: np.ndarray,
             popt, _ = curve_fit(
                 _gaussian2d, x_data, y_data,
                 p0=[amp0, w2_0, off0],
-                bounds=([-np.inf, 0.25, -np.inf],
+                bounds=([-np.inf, 1.0, -np.inf],   # w ≥ 1 px (≥ pixel_um)
                         [np.inf, (r * 0.95) ** 2, np.inf]),
                 maxfev=4000,
             )
@@ -353,6 +380,14 @@ def compute_imsd(acf: np.ndarray,
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else np.nan
 
     result.update(D=D, w0=w0, slope=slope, intercept=intercept, r2=r2)
+
+    if r2 < 0.5:
+        warnings.warn(
+            f"Global iMSD R²={r2:.3f} < 0.5 — the iMSD fit is unreliable for this movie. "
+            f"Use dmap_median_D (tiled D map) as the primary diffusion estimate instead. "
+            f"Possible causes: mixed cell compartments, sample drift, or heavy photobleaching.",
+            UserWarning, stacklevel=2,
+        )
     return result
 
 
@@ -398,11 +433,14 @@ def compute_d_map(movie: np.ndarray,
                 continue
 
             try:
-                acf = compute_stics(tile, max_lag=max_lag)
-                res = compute_imsd(acf, pixel_um=pixel_um, dt=dt,
-                                   lag_min=lag_min, lag_max=lag_max)
-                d = res["D"]
-                if np.isfinite(d) and 1e-5 < d < 10.0:
+                acf = compute_stics(tile, max_lag=max_lag, intensity_mask_frac=0)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    res = compute_imsd(acf, pixel_um=pixel_um, dt=dt,
+                                       lag_min=lag_min, lag_max=lag_max)
+                d  = res["D"]
+                r2 = res["r2"]
+                if np.isfinite(d) and 1e-5 < d < 10.0 and (np.isnan(r2) or r2 > 0.3):
                     D_map[iy, ix] = d
             except Exception:
                 pass
@@ -538,14 +576,23 @@ def _compute_d_map_gpu(movie: np.ndarray,
     det    = n_v * St2 - St ** 2
     good   = (np.abs(det) > 1e-14) & (n_v >= 3)
     slope  = np.where(good, (n_v * Stw - St * Sw_) / np.where(good, det, 1.0), np.nan)
+    intercept = np.where(good, (Sw_ * St2 - St * Stw) / np.where(good, det, 1.0), np.nan)
     D_vals = slope / 4.0
 
+    # R² of the per-tile iMSD line fit: exclude tiles with poor linearity
+    w2v_hat = slope[np.newaxis] * tv_b + intercept[np.newaxis]
+    ss_res  = np.where(fin, (w2v - w2v_hat) ** 2, 0.0).sum(axis=0)
+    w2v_bar = np.where(fin, Sw_[np.newaxis] / np.maximum(n_v[np.newaxis], 1), 0.0)
+    ss_tot  = np.where(fin, (w2v - w2v_bar) ** 2, 0.0).sum(axis=0)
+    tile_r2 = np.where((ss_tot > 0) & good, 1.0 - ss_res / ss_tot, np.nan)
+
     D_vals = np.where(
-        good & ~empty & (D_vals > 1e-5) & (D_vals < 10.0),
+        good & ~empty & (D_vals > 1e-5) & (D_vals < 10.0) & (tile_r2 > 0.3),
         D_vals, np.nan,
     )
+    n_valid = int(np.isfinite(D_vals).sum())
     print(f"   Tiled D map: {ny}×{nx} tiles of {tile_px}×{tile_px} px "
-          f"({tile_px * pixel_um:.1f} µm)  [GPU]")
+          f"({tile_px * pixel_um:.1f} µm)  [{n_valid}/{n_tiles} valid tiles, GPU]")
     return D_vals.reshape(ny, nx).astype(np.float32)
 
 
