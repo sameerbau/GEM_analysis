@@ -385,7 +385,71 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
     return acf.get() if use_gpu and HAS_GPU else np.asarray(acf)
 
 
-# ── Gaussian fitting on STICS frames ─────────────────────────────────────────
+def compute_stics_diff(movie: np.ndarray,
+                       max_lag: int = MAX_LAG,
+                       intensity_mask_frac: float = 0.10) -> np.ndarray:
+    """
+    STICS on frame-to-frame differences ΔI(t) = I(t) − I(t−1).
+
+    Physical effect
+    ---------------
+    Immobile particles contribute ΔI = 0 and vanish from the ACF.
+    Slow species (τ_c >> 1 frame) are also strongly suppressed.
+    Mobile GEM transits produce large ΔI spikes and dominate the ACF.
+
+    Mathematical note
+    -----------------
+    The ACF of ΔI is the second finite difference of the standard STICS ACF:
+        G_ΔI(ρ,τ) = 2·G_I(ρ,τ) − G_I(ρ,τ−1) − G_I(ρ,τ+1)
+
+    This is NOT a simple Gaussian in ρ for τ ≥ 1 — the peak at ρ=0 cancels
+    and the function becomes annular.  Standard Gaussian iMSD fitting therefore
+    gives unreliable w(τ) values.
+
+    For quantitative D extraction from ΔI data use DDM (ddm_analysis.py), which
+    applies the same differencing in Fourier space where the decay is cleanly
+    exponential at each q.  Use this function to visualise the ACF shape or as
+    an exploratory tool.
+
+    Returns
+    -------
+    acf : (max_lag+1, Y, X) float32 — same format as compute_stics()
+    """
+    T, Y, X = movie.shape
+    arr     = movie.astype(np.float32)
+
+    # Spatial mask on original movie mean (not on differences)
+    if intensity_mask_frac > 0:
+        mean_t     = arr.mean(axis=0)
+        bright_ref = float(np.percentile(mean_t, 99))
+        imask      = (mean_t >= intensity_mask_frac * bright_ref).astype(np.float32)
+    else:
+        imask = None
+
+    diff = arr[1:] - arr[:-1]              # (T−1, Y, X) — immobile → 0
+    if imask is not None:
+        diff *= imask[np.newaxis]
+
+    diff_var = float(np.mean(diff ** 2))
+    if diff_var < 1e-12:
+        raise ValueError("Near-zero variance in frame differences.")
+    norm_denom = Y * X * diff_var
+
+    F_diff = np.fft.rfft2(diff).astype(np.complex64)   # (T−1, Y, X//2+1)
+    T_eff  = T - 1
+
+    acf = np.zeros((max_lag + 1, Y, X), dtype=np.float32)
+    for tau in range(max_lag + 1):
+        n = T_eff - tau
+        if n <= 0:
+            break
+        cross    = (np.conj(F_diff[:n]) * F_diff[tau: tau + n]).mean(axis=0)
+        cc       = np.real(np.fft.irfft2(cross, s=(Y, X)))
+        acf[tau] = np.fft.fftshift(cc / norm_denom)
+
+    return acf
+
+
 
 def _gaussian2d(xy, amplitude, w2, offset):
     """Isotropic 2-D Gaussian: A·exp(-(x²+y²)/w²) + C.
