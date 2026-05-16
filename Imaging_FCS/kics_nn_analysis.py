@@ -1300,15 +1300,20 @@ def compare_all_methods(
 if __name__ == "__main__":
     import sys, time
 
-    tiff       = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
+    inp        = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
     tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
-    out_dir    = tiff.parent / "kics_nn_out"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    t0 = time.time()
-    compare_all_methods(
-        tiff, tracking_D=tracking_D, out_dir=out_dir,
-        pixel_um=PIXEL_UM, dt=DT, max_lag=MAX_LAG,
-        run_ddm=False,
-    )
-    print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")
+    tiffs = sorted(list(inp.glob("*.tif")) + list(inp.glob("*.tiff"))) if inp.is_dir() else [inp]
+    if not tiffs:
+        sys.exit(f"[kICS] No .tif files found in {inp}")
+
+    for tiff in tiffs:
+        out_dir = tiff.parent / "kics_nn_out"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        t0 = time.time()
+        compare_all_methods(
+            tiff, tracking_D=tracking_D, out_dir=out_dir,
+            pixel_um=PIXEL_UM, dt=DT, max_lag=MAX_LAG,
+            run_ddm=False,
+        )
+        print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")

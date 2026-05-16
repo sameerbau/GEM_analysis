@@ -972,17 +972,22 @@ def run_tics(
 
 if __name__ == "__main__":
     import sys, time
-    tiff       = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
+    inp        = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
     tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
     mode       = sys.argv[3] if len(sys.argv) > 3 else "all"   # bright | jdd | tics | all
-    out_dir    = tiff.parent / "jdd_out"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    t0 = time.time()
-    if mode in ("bright", "all"):
-        run_brightness_nn_msd(tiff, tracking_D=tracking_D, out_dir=out_dir)
-    if mode in ("jdd", "all"):
-        run_jdd_em(tiff, tracking_D=tracking_D, out_dir=out_dir, n_components=3)
-    if mode in ("tics", "all"):
-        run_tics(tiff, tracking_D=tracking_D, out_dir=out_dir)
-    print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")
+    tiffs = sorted(list(inp.glob("*.tif")) + list(inp.glob("*.tiff"))) if inp.is_dir() else [inp]
+    if not tiffs:
+        sys.exit(f"[JDD] No .tif files found in {inp}")
+
+    for tiff in tiffs:
+        out_dir = tiff.parent / "jdd_out"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        t0 = time.time()
+        if mode in ("bright", "all"):
+            run_brightness_nn_msd(tiff, tracking_D=tracking_D, out_dir=out_dir)
+        if mode in ("jdd", "all"):
+            run_jdd_em(tiff, tracking_D=tracking_D, out_dir=out_dir, n_components=3)
+        if mode in ("tics", "all"):
+            run_tics(tiff, tracking_D=tracking_D, out_dir=out_dir)
+        print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")
