@@ -161,6 +161,32 @@ def subtract_background(movie: np.ndarray, percentile: float = 5) -> np.ndarray:
     return np.maximum(movie - bg[np.newaxis], 0.0)
 
 
+def temporal_detrend(movie: np.ndarray, window: int = 0) -> np.ndarray:
+    """
+    Remove slow fluorescence components via per-pixel running-mean subtraction.
+
+    For each pixel the local running mean (uniform filter of length `window`
+    along the time axis) is subtracted, then the overall temporal mean is
+    added back so that downstream normalisation (g_mean) is unchanged.
+
+    Effect: components whose correlation time >> window are suppressed
+    (immobile GEMs, autofluorescence, membrane-bound particles).
+    Components whose correlation time << window are preserved
+    (mobile GEM transits, τ_c ≈ 4–5 frames at D ≈ 0.044 µm²/s).
+
+    window=0 disables the filter (no-op, returns movie unchanged).
+
+    Typical value: 50 frames (5 s at 0.1 s/frame) for D ≈ 0.04–0.1 µm²/s.
+    """
+    if window <= 1:
+        return movie
+    from scipy.ndimage import uniform_filter1d
+    # running mean along time; 'nearest' padding avoids edge ramps
+    run_mean = uniform_filter1d(movie, size=window, axis=0, mode='nearest')
+    tmean    = movie.mean(axis=0, keepdims=True)          # (1, Y, X)
+    return movie - run_mean + tmean
+
+
 def correct_drift(movie: np.ndarray, max_shift_px: int = 20) -> tuple:
     """
     Rigid sub-pixel drift correction via phase cross-correlation.
@@ -217,6 +243,9 @@ def preprocess(movie: np.ndarray, correct_drift_flag: bool = True) -> tuple:
 
     Returns (processed_movie, shifts) where shifts is (T,2) drift trajectory.
     shifts is all-zeros if correct_drift_flag=False.
+
+    Temporal detrending is handled inside compute_stics via detrend_window so
+    that the normalisation is computed from the filtered fluctuation field.
     """
     movie = correct_bleaching(movie)
     movie = subtract_background(movie)
@@ -263,11 +292,23 @@ def _align_mask(mask: np.ndarray, target_shape: tuple) -> np.ndarray:
 
 def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
                   use_gpu: bool = False,
-                  intensity_mask_frac: float = 0.10) -> np.ndarray:
+                  intensity_mask_frac: float = 0.10,
+                  detrend_window: int = 0) -> np.ndarray:
     """
     Spatio-temporal image correlation spectroscopy (STICS).
 
-    G(ξ, η, τ) = <δI(r,t)·δI(r+ρ, t+τ)>_{r,t} / <I>²
+    G(ξ, η, τ) = <δI(r,t)·δI(r+ρ, t+τ)>_{r,t} / σ²
+
+    σ² = <δI²> (variance of the fluctuation field) when detrend_window > 1,
+    otherwise σ² = <I>² (standard STICS normalisation).  Both give the same
+    Gaussian width w(τ) and therefore the same D; the variance form avoids
+    near-zero amplitudes when the dominant fluorescence is immobile.
+
+    detrend_window: if > 1, subtract a per-pixel running mean (uniform filter
+    of this length) from δI before computing the ACF.  This suppresses
+    components whose correlation time >> detrend_window frames (immobile GEMs,
+    autofluorescence) so that the iMSD reflects only mobile species.
+    Typical value: 50 frames (= 5 s at 0.1 s/frame).
 
     Implemented via FFT cross-correlation (O(N² log N) per lag).
     Runs on GPU (CuPy) when use_gpu=True and a CUDA device is available.
@@ -281,6 +322,7 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
                          the brightest 1% mean; removes dark background from the
                          global ACF so cytoplasm/nuclei don't dilute the signal.
                          Set to 0 to disable.
+    detrend_window     : running-mean window (frames) for temporal high-pass; 0=off.
 
     Returns
     -------
@@ -301,10 +343,33 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
         arr       *= imask[xp.newaxis]
         mean_t    *= imask
 
-    df     = arr - mean_t[xp.newaxis]; del arr
-    g_mean = float((mean_t.get() if use_gpu and HAS_GPU else np.asarray(mean_t)).mean())
-    if g_mean < 1e-6:
-        raise ValueError("Near-zero mean after preprocessing — check input data.")
+    df = arr - mean_t[xp.newaxis]; del arr   # zero-mean fluctuation field
+
+    # ── Optional temporal high-pass (running-mean subtraction) ────────────────
+    # Removes immobile/slow components whose τ_corr >> detrend_window so the
+    # STICS ACF reflects only mobile species.  Applied to df (already zero-mean)
+    # to avoid renormalising mean_t.
+    if detrend_window > 1:
+        from scipy.ndimage import uniform_filter1d
+        df_np = df.get() if (use_gpu and HAS_GPU) else np.asarray(df)
+        # Running mean of df (itself zero-mean) over W frames; 'reflect' avoids
+        # the boundary ramp that 'nearest' introduces.
+        run_df = uniform_filter1d(df_np, size=detrend_window, axis=0,
+                                  mode='reflect').astype(np.float32)
+        df_np -= run_df; del run_df
+        df = xp.asarray(df_np); del df_np
+        # Normalise by variance of the filtered df so G(0,0,0)≈1 regardless of
+        # immobile fraction (g_mean would be dominated by immobile otherwise).
+        df_var = float(xp.mean(df ** 2))
+        if df_var < 1e-12:
+            raise ValueError("Near-zero variance after temporal detrending — "
+                             "check that the movie contains mobile particles.")
+        norm_denom = Y * X * df_var
+    else:
+        g_mean = float((mean_t.get() if use_gpu and HAS_GPU else np.asarray(mean_t)).mean())
+        if g_mean < 1e-6:
+            raise ValueError("Near-zero mean after preprocessing — check input data.")
+        norm_denom = Y * X * g_mean ** 2
 
     # Precompute rfft2 for all frames; complex64 halves memory vs complex128
     F_all = xp.fft.rfft2(df).astype(xp.complex64); del df  # (T, Y, X//2+1)
@@ -314,13 +379,77 @@ def compute_stics(movie: np.ndarray, max_lag: int = MAX_LAG,
         n     = T - tau
         cross = (xp.conj(F_all[:n]) * F_all[tau: tau + n]).mean(axis=0)
         cc    = xp.real(xp.fft.irfft2(cross, s=(Y, X)))
-        acf[tau] = xp.fft.fftshift(cc / (Y * X * g_mean ** 2))
+        acf[tau] = xp.fft.fftshift(cc / norm_denom)
 
     # Return as numpy regardless of backend
     return acf.get() if use_gpu and HAS_GPU else np.asarray(acf)
 
 
-# ── Gaussian fitting on STICS frames ─────────────────────────────────────────
+def compute_stics_diff(movie: np.ndarray,
+                       max_lag: int = MAX_LAG,
+                       intensity_mask_frac: float = 0.10) -> np.ndarray:
+    """
+    STICS on frame-to-frame differences ΔI(t) = I(t) − I(t−1).
+
+    Physical effect
+    ---------------
+    Immobile particles contribute ΔI = 0 and vanish from the ACF.
+    Slow species (τ_c >> 1 frame) are also strongly suppressed.
+    Mobile GEM transits produce large ΔI spikes and dominate the ACF.
+
+    Mathematical note
+    -----------------
+    The ACF of ΔI is the second finite difference of the standard STICS ACF:
+        G_ΔI(ρ,τ) = 2·G_I(ρ,τ) − G_I(ρ,τ−1) − G_I(ρ,τ+1)
+
+    This is NOT a simple Gaussian in ρ for τ ≥ 1 — the peak at ρ=0 cancels
+    and the function becomes annular.  Standard Gaussian iMSD fitting therefore
+    gives unreliable w(τ) values.
+
+    For quantitative D extraction from ΔI data use DDM (ddm_analysis.py), which
+    applies the same differencing in Fourier space where the decay is cleanly
+    exponential at each q.  Use this function to visualise the ACF shape or as
+    an exploratory tool.
+
+    Returns
+    -------
+    acf : (max_lag+1, Y, X) float32 — same format as compute_stics()
+    """
+    T, Y, X = movie.shape
+    arr     = movie.astype(np.float32)
+
+    # Spatial mask on original movie mean (not on differences)
+    if intensity_mask_frac > 0:
+        mean_t     = arr.mean(axis=0)
+        bright_ref = float(np.percentile(mean_t, 99))
+        imask      = (mean_t >= intensity_mask_frac * bright_ref).astype(np.float32)
+    else:
+        imask = None
+
+    diff = arr[1:] - arr[:-1]              # (T−1, Y, X) — immobile → 0
+    if imask is not None:
+        diff *= imask[np.newaxis]
+
+    diff_var = float(np.mean(diff ** 2))
+    if diff_var < 1e-12:
+        raise ValueError("Near-zero variance in frame differences.")
+    norm_denom = Y * X * diff_var
+
+    F_diff = np.fft.rfft2(diff).astype(np.complex64)   # (T−1, Y, X//2+1)
+    T_eff  = T - 1
+
+    acf = np.zeros((max_lag + 1, Y, X), dtype=np.float32)
+    for tau in range(max_lag + 1):
+        n = T_eff - tau
+        if n <= 0:
+            break
+        cross    = (np.conj(F_diff[:n]) * F_diff[tau: tau + n]).mean(axis=0)
+        cc       = np.real(np.fft.irfft2(cross, s=(Y, X)))
+        acf[tau] = np.fft.fftshift(cc / norm_denom)
+
+    return acf
+
+
 
 def _gaussian2d(xy, amplitude, w2, offset):
     """Isotropic 2-D Gaussian: A·exp(-(x²+y²)/w²) + C.
@@ -458,7 +587,8 @@ def compute_d_map(movie: np.ndarray,
                   max_lag: int = MAX_LAG,
                   lag_min: int = LAG_MIN,
                   lag_max: int = LAG_MAX,
-                  use_gpu: bool = False) -> np.ndarray:
+                  use_gpu: bool = False,
+                  detrend_window: int = 0) -> np.ndarray:
     """
     Divide movie into non-overlapping square tiles; compute iMSD D in each.
 
@@ -491,14 +621,16 @@ def compute_d_map(movie: np.ndarray,
                 continue
 
             try:
-                acf = compute_stics(tile, max_lag=max_lag, intensity_mask_frac=0)
+                acf = compute_stics(tile, max_lag=max_lag, intensity_mask_frac=0,
+                                    detrend_window=detrend_window)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     res = compute_imsd(acf, pixel_um=pixel_um, dt=dt,
                                        lag_min=lag_min, lag_max=lag_max)
                 d  = res["D"]
                 r2 = res["r2"]
-                if np.isfinite(d) and 1e-5 < d < 10.0:
+                if (np.isfinite(d) and np.isfinite(r2)
+                        and r2 > 0.2 and 1e-5 < d < 10.0):
                     D_map[iy, ix] = d
             except Exception:
                 pass
@@ -855,7 +987,8 @@ def analyse_movie(tiff_path: Path,
                   lag_max: int = LAG_MAX,
                   camera: str = "sCMOS",
                   use_gpu: bool = False,
-                  correct_drift_flag: bool = True) -> dict:
+                  correct_drift_flag: bool = True,
+                  detrend_window: int = 0) -> dict:
     name  = tiff_path.stem
     out   = out_dir or (tiff_path.parent / "imfcs_results")
     out.mkdir(parents=True, exist_ok=True)
@@ -899,7 +1032,8 @@ def analyse_movie(tiff_path: Path,
     if movie_fft.shape[1] != Y or movie_fft.shape[2] != X:
         print(f"   FFT crop: {Y}×{X} → {movie_fft.shape[1]}×{movie_fft.shape[2]} px "
               f"(centre crop to power-of-2 for speed)")
-    acf    = compute_stics(movie_fft, max_lag=max_lag, use_gpu=use_gpu)
+    acf    = compute_stics(movie_fft, max_lag=max_lag, use_gpu=use_gpu,
+                           detrend_window=detrend_window)
     result = compute_imsd(acf, pixel_um=pixel_um, dt=dt,
                           lag_min=lag_min, lag_max=lag_max)
 
@@ -918,7 +1052,7 @@ def analyse_movie(tiff_path: Path,
     print("   [2/3] Tiled D map …")
     D_map = compute_d_map(movie, tile_px=tile_px, pixel_um=pixel_um, dt=dt,
                           max_lag=max_lag, lag_min=lag_min, lag_max=lag_max,
-                          use_gpu=use_gpu)
+                          use_gpu=use_gpu, detrend_window=detrend_window)
 
     valid_tiles = np.isfinite(D_map).sum()
     print(f"   {valid_tiles} valid tiles  |  "
@@ -966,7 +1100,8 @@ def batch_analyse(tiff_dir: Path,
                   lag_max: int = LAG_MAX,
                   camera: str = "sCMOS",
                   use_gpu: bool = False,
-                  correct_drift_flag: bool = True) -> pd.DataFrame | None:
+                  correct_drift_flag: bool = True,
+                  detrend_window: int = 0) -> pd.DataFrame | None:
     tiffs = collect_tiff_movies(tiff_dir)
     if not tiffs:
         print(f"No TIFF movie stacks found in {tiff_dir}")
@@ -992,7 +1127,8 @@ def batch_analyse(tiff_dir: Path,
                               pixel_um=pixel_um, dt=dt, tile_px=tile_px,
                               max_lag=max_lag, lag_min=lag_min, lag_max=lag_max,
                               camera=camera, use_gpu=use_gpu,
-                              correct_drift_flag=correct_drift_flag)
+                              correct_drift_flag=correct_drift_flag,
+                              detrend_window=detrend_window)
             summaries.append(s)
         except Exception as exc:
             print(f"  ERROR on {tiff.name}: {exc}")
@@ -1038,6 +1174,10 @@ def _parse_args():
                    help="Use GPU acceleration via CuPy (requires CUDA + cupy install)")
     p.add_argument("--no-drift-correction", action="store_true", default=False,
                    help="Skip rigid drift correction (useful if movie is already stabilised)")
+    p.add_argument("--detrend-window", type=int, default=0,
+                   help="Running-mean subtraction window (frames) to remove slow/immobile "
+                        "fluorescence before STICS.  0 = disabled.  Typical: 50 (5 s at "
+                        "0.1 s/frame).  Use when immobile fraction dominates the iMSD.")
     return p.parse_args()
 
 
@@ -1058,4 +1198,5 @@ if __name__ == "__main__":
         camera              = args.camera,
         use_gpu             = args.gpu,
         correct_drift_flag  = not args.no_drift_correction,
+        detrend_window      = args.detrend_window,
     )
