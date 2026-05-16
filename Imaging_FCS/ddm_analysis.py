@@ -779,12 +779,17 @@ def analyse_ddm(
 
 if __name__ == "__main__":
     import sys, time
-    tiff      = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
+    inp        = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
     tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
-    out_dir   = tiff.parent / "ddm_out"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    t0  = time.time()
-    fit = analyse_ddm(tiff, tracking_D=tracking_D, out_dir=out_dir,
-                      q_min_fit=Q_MIN_FIT, q_max_fit=Q_MAX_FIT)
-    print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")
+    tiffs = sorted(list(inp.glob("*.tif")) + list(inp.glob("*.tiff"))) if inp.is_dir() else [inp]
+    if not tiffs:
+        sys.exit(f"[DDM] No .tif files found in {inp}")
+
+    for tiff in tiffs:
+        out_dir = tiff.parent / "ddm_out"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        t0 = time.time()
+        fit = analyse_ddm(tiff, tracking_D=tracking_D, out_dir=out_dir,
+                          q_min_fit=Q_MIN_FIT, q_max_fit=Q_MAX_FIT)
+        print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")
