@@ -55,8 +55,8 @@ PIXEL_UM  = 0.094
 DT        = 0.1
 MAX_LAG   = 30
 N_Q_BINS  = 35        # number of radial q bins across the full spectrum
-Q_MIN_FIT = 8.0       # rad/µm — fast component already decayed here
-Q_MAX_FIT = 22.0      # rad/µm — beyond PSF spatial scale, SNR drops
+Q_MIN_FIT = 9.0       # rad/µm — narrow window where D(q)≈D_GEM crossover
+Q_MAX_FIT = 12.0      # rad/µm — D_GEM = 0.044 at q≈10; fast/slow both gone
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -474,7 +474,7 @@ def plot_ddm_two_component(
     fig, axes = plt.subplots(2, 2, figsize=(13, 9))
     fig.suptitle(
         f"Two-component DDM — {movie_name}\n"
-        f"D_fast={D1:.3f} µm²/s    D_GEM={D2:.4f} µm²/s"
+        f"D_GEM={D1:.4f} µm²/s    D_slow={D2:.4f} µm²/s"
         + (f"    (tracking={tracking_D:.4f})" if tracking_D else ""),
         fontsize=10,
     )
@@ -507,7 +507,7 @@ def plot_ddm_two_component(
            color="steelblue", alpha=0.75, label="GEM fraction A₂/(A₁+A₂)")
     ax.axhline(0.5, ls="--", color="gray", lw=0.8)
     ax.set_xlabel("q  (rad/µm)"); ax.set_ylabel("Fraction GEM")
-    ax.set_title(f"GEM amplitude fraction  (D_GEM={D2:.4f} µm²/s)")
+    ax.set_title(f"GEM amplitude fraction  (D_GEM={D1:.4f} µm²/s)")
     ax.set_ylim(0, 1.05)
     ax.legend(fontsize=8)
 
@@ -516,9 +516,9 @@ def plot_ddm_two_component(
     valid1 = mask & np.isfinite(A1)
     valid2 = mask & np.isfinite(A2)
     ax.semilogy(q[valid1], A1[valid1], "o-", color="steelblue", ms=4,
-                label=f"A₁(q) GEM  D={D1:.4f}")
+                label=f"A_GEM  D={D1:.4f}")
     ax.semilogy(q[valid2], A2[valid2], "s-", color="darkorange", ms=4,
-                label=f"A₂(q) slow  D={D2:.5f}")
+                label=f"A_slow  D={D2:.4f}")
     ax.set_xlabel("q  (rad/µm)"); ax.set_ylabel("Amplitude  (a.u.)")
     ax.set_title("Species amplitudes vs q")
     ax.legend(fontsize=8)
@@ -538,10 +538,10 @@ def plot_ddm_two_component(
             ax.plot(q2tau, g_norm, ".", ms=2, alpha=0.35, color=cmap[k])
     # Reference curves
     xref = np.linspace(0, 80, 200)
-    ax.plot(xref, 1 - np.exp(-D2 * xref), "b-", lw=1.8,
-            label=f"D_GEM={D2:.4f}")
-    ax.plot(xref, 1 - np.exp(-D1 * xref), "r:", lw=1.5,
-            label=f"D_fast={D1:.3f}")
+    ax.plot(xref, 1 - np.exp(-D1 * xref), "b-", lw=1.8,
+            label=f"D_GEM={D1:.4f}")
+    ax.plot(xref, 1 - np.exp(-D2 * xref), "r:", lw=1.5,
+            label=f"D_slow={D2:.4f}")
     if tracking_D:
         ax.plot(xref, 1 - np.exp(-tracking_D * xref), "k--", lw=1.2,
                 label=f"tracking={tracking_D:.4f}")
@@ -741,6 +741,19 @@ def analyse_ddm(
     if tracking_D is not None and np.isfinite(fit["D_median"]):
         print(f"   Tracking D:  {tracking_D:.5f}  ratio = {fit['D_median']/tracking_D:.3f}×")
 
+    # Find D at q closest to 10 rad/µm (empirical GEM crossover)
+    _q10_ref = 10.0  # rad/µm — where single-component D ≈ D_GEM for typical conditions
+    _valid_qs = [(abs(q - _q10_ref), q, fit["D_per_q"][iq])
+                 for iq, q in enumerate(q_centers)
+                 if np.isfinite(fit["D_per_q"][iq])]
+    if _valid_qs:
+        _, _q10, _D10 = min(_valid_qs, key=lambda x: x[0])
+        print(f"   D(q≈10 rad/µm):  {_D10:.5f} µm²/s  at q={_q10:.2f}")
+        if tracking_D is not None:
+            print(f"   Ratio vs SPT:    {_D10/tracking_D:.3f}×")
+    fit["D_q10"] = _D10 if _valid_qs else np.nan
+    fit["q_q10"] = _q10 if _valid_qs else np.nan
+
     print("\n   D(q) table:")
     print(f"   {'q (rad/µm)':>12}  {'τ_c_GEM(s)':>10}  {'τ_c_fast(s)':>12}  "
           f"{'D_fit (µm²/s)':>14}  in_range?")
@@ -763,6 +776,9 @@ def analyse_ddm(
     # bound of 0.01 and produces a systematically wrong D_GEM.
     fit2 = None
     if two_component:
+        # lag_min=3 (τ=0.3s): fast diffuser (D≈0.45) fully decayed at q≥6 (τ_c≤0.06s).
+        # Medium component (D≈0.15) still ~20% remaining → absorbed into D1 estimate.
+        # Two-component model separates D1≈D_GEM from D2≈D_slow.
         q2_min, q2_max, lag2_min = 6.0, 14.0, 3
         print(f"\n[3b] Two-component DDM fit (GEM + slow residual)  "
               f"q={q2_min:.0f}–{q2_max:.0f} rad/µm, lag {lag2_min}–{max_lag} …")
@@ -1006,11 +1022,46 @@ def analyse_ddm_tiled(
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _load_spt_tracking_d(tiff_path: Path, fallback: float = 0.04374) -> float | None:
+    """Search nearby diffusion_summary.csv files for SPT median D matching this embryo."""
+    stem = tiff_path.stem  # e.g. "Em1.nd2_crop"
+    key = stem.split(".")[0].lower()  # "em1", "em2", etc.
+    # build candidate CSV paths: check multiple subdirectory patterns
+    search_roots = [tiff_path.parent] + list(tiff_path.parents)[:5]
+    csv_candidates = []
+    for d in search_roots:
+        for subpath in ("diffusion_summary.csv",
+                        "PB diffusion all/diffusion_summary.csv",
+                        "Analysed data/PB diffusion all/diffusion_summary.csv"):
+            p = d / subpath
+            if p.exists():
+                csv_candidates.append(p)
+    import csv as _csv
+    for csv_path in csv_candidates:
+        try:
+            with open(csv_path, newline="") as f:
+                reader = _csv.DictReader(f)
+                candidates = []
+                for row in reader:
+                    fname = row.get("FileName", "").lower()
+                    if key in fname:
+                        candidates.append((fname, float(row["MedianDiffusion"])))
+            if candidates:
+                best = max(candidates, key=lambda x: len(x[0]))
+                print(f"   [SPT] Matched '{best[0]}' → tracking D = {best[1]:.5f} µm²/s  (from {csv_path})")
+                return best[1]
+        except Exception:
+            pass
+    print(f"   [SPT] No matching row for '{key}' in any diffusion_summary.csv — using fallback {fallback}")
+    return fallback
+
+
 if __name__ == "__main__":
     import sys, time
-    inp        = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
-    tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
-    use_gpu    = ("--no-gpu" not in sys.argv)
+    inp     = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
+    use_gpu = ("--no-gpu" not in sys.argv)
+    # allow explicit override: python ddm_analysis.py file.tif 0.044
+    tracking_D_override = float(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].replace(".", "").lstrip("-").isdigit() else None
 
     try:
         from gpu_utils import gpu_info
@@ -1025,6 +1076,7 @@ if __name__ == "__main__":
     for tiff in tiffs:
         out_dir = tiff.parent / "ddm_out"
         out_dir.mkdir(parents=True, exist_ok=True)
+        tracking_D = tracking_D_override if tracking_D_override is not None else _load_spt_tracking_d(tiff)
         t0 = time.time()
         fit = analyse_ddm(tiff, tracking_D=tracking_D, out_dir=out_dir,
                           q_min_fit=Q_MIN_FIT, q_max_fit=Q_MAX_FIT,
