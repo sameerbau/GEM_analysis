@@ -27,6 +27,10 @@ build/
 *.swp
 *.swo
 
+# Large raw TIF files (available from GitHub releases)
+tif_data/*.tif
+tif_data/*.tiff
+
 # Output directories (optional - uncomment if needed)
 GEM_mitosis/
 GEM_diffusion_stages/
