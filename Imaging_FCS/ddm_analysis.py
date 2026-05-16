@@ -114,6 +114,7 @@ def compute_ddm_structure_function(
     n_q_bins: int = N_Q_BINS,
     q_min_um: float | None = None,
     q_max_um: float | None = None,
+    use_gpu: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute isotropic image structure function S(q, τ).
@@ -166,18 +167,58 @@ def compute_ddm_structure_function(
         PS_q[i] = PS[m].mean() if m.sum() > 0 else np.nan
 
     # Structure function S(q,τ) = 2·PS(q) − 2·Re[C(q,τ)]
+    # Computed per-bin via temporal FFT (Wiener-Khinchin) with zero-padding
+    # to length 2T so the resulting autocorrelation is linear (unbiased), not
+    # circular.  This replaces the O(max_lag·T) direct sum with O(T·log T) FFTs.
     S_mat = np.zeros((max_lag, n_q_bins), dtype=np.float64)
     taus  = np.arange(1, max_lag + 1, dtype=np.float64) * dt
+    max_lag_eff = min(max_lag, T - 1)
+    n_pairs = (T - np.arange(1, max_lag_eff + 1)).astype(np.float64)
 
-    for tau in range(1, max_lag + 1):
-        n     = T - tau
-        if n <= 0:
-            break
-        cross = (np.conj(F_all[:n]) * F_all[tau: tau + n]).mean(axis=0)
-        C_re  = np.real(cross)                  # (Y, X//2+1)
-        for iq, mask in enumerate(masks):
-            if mask.sum() > 0 and np.isfinite(PS_q[iq]):
-                S_mat[tau - 1, iq] = 2.0 * PS_q[iq] - 2.0 * C_re[mask].mean()
+    # Optional GPU dispatch
+    try:
+        from gpu_utils import get_xp, to_numpy
+    except Exception:
+        try:
+            from .gpu_utils import get_xp, to_numpy  # type: ignore
+        except Exception:
+            def get_xp(prefer_gpu: bool = True):
+                return np
+            def to_numpy(arr):
+                return np.asarray(arr)
+
+    xp = get_xp(prefer_gpu=use_gpu)
+    n_fft = int(2 * T)
+
+    # Move F_all to GPU once if needed
+    try:
+        F_dev = xp.asarray(F_all) if xp is not np else F_all
+    except Exception:
+        xp = np
+        F_dev = F_all
+
+    for iq, mask in enumerate(masks):
+        if mask.sum() == 0 or not np.isfinite(PS_q[iq]):
+            continue
+        try:
+            mask_dev = xp.asarray(mask) if xp is not np else mask
+            # Select all pixels in this q-bin: shape (T, N_pix)
+            F_bin = F_dev[:, mask_dev]
+            # Temporal FFT with zero-pad to 2T → linear ACF
+            F_t = xp.fft.fft(F_bin, n=n_fft, axis=0)
+            acf = xp.fft.ifft(xp.abs(F_t) ** 2, axis=0)  # (2T, N_pix) complex
+            # acf[τ] = sum_{t=0}^{T-1-τ} conj(F_bin[t]) * F_bin[t+τ]
+            C_re_q_dev = xp.real(acf[1: max_lag_eff + 1]).mean(axis=1)
+            C_re_q = to_numpy(C_re_q_dev)
+            # Convert sum → mean over (T-τ) pairs:
+            S_mat[:max_lag_eff, iq] = 2.0 * PS_q[iq] - 2.0 * C_re_q / n_pairs
+        except Exception as exc:  # pragma: no cover
+            warnings.warn(f"DDM bin {iq} failed via xp={xp.__name__}: {exc}")
+            # Fallback: direct computation on CPU for this bin only
+            for tau in range(1, max_lag_eff + 1):
+                n = T - tau
+                cross = (np.conj(F_all[:n, mask]) * F_all[tau:tau + n, mask]).mean(axis=0)
+                S_mat[tau - 1, iq] = 2.0 * PS_q[iq] - 2.0 * np.real(cross).mean()
 
     return S_mat, q_centers, taus
 
@@ -646,6 +687,7 @@ def analyse_ddm(
     q_max_fit: float = Q_MAX_FIT,
     correct_drift_flag: bool = False,
     two_component: bool = True,
+    use_gpu: bool = True,
 ) -> dict:
     """
     Full DDM pipeline on one TIFF movie.
@@ -682,6 +724,7 @@ def analyse_ddm(
     t0 = time.time()
     S_mat, q_centers, taus = compute_ddm_structure_function(
         movie_c, max_lag=max_lag, pixel_um=pixel_um, dt=dt, n_q_bins=n_q_bins,
+        use_gpu=use_gpu,
     )
     print(f"      done in {time.time()-t0:.1f}s")
 
@@ -774,6 +817,190 @@ def analyse_ddm(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Tiled DDM — spatial D distribution
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def analyse_ddm_tiled(
+    tiff_path: Path,
+    tile_size: int = 256,
+    tracking_D: float | None = None,
+    out_dir: Path | None = None,
+    pixel_um: float = PIXEL_UM,
+    dt: float = DT,
+    max_lag: int = MAX_LAG,
+    use_gpu: bool = True,
+) -> dict:
+    """
+    Divide the FOV into non-overlapping tiles of size tile_size × tile_size, run
+    DDM two-component fit on each tile, and return the distribution of D_GEM
+    values across tiles.  Gives a spatial D-distribution analogous to per-track
+    D in single-particle tracking.
+
+    Returns
+    -------
+    dict with keys:
+        D_gem_tiles, D_slow_tiles : (n_tiles,) arrays
+        tile_centers              : list of (y_center, x_center)
+        tile_size                 : int
+        n_valid                   : number of converged tile fits
+        median_D, mean_D, std_D   : summary stats over D_gem_tiles
+    """
+    import csv
+    import time
+
+    tiff_path = Path(tiff_path)
+    name      = tiff_path.stem
+    out       = Path(out_dir or tiff_path.parent / "ddm_results")
+    out.mkdir(parents=True, exist_ok=True)
+
+    print(f"\n[DDM-tiled] {name}  tile_size={tile_size}")
+    print("[1/3] Loading + preprocessing …")
+    try:
+        movie_raw = load_tiff_stack(tiff_path)
+        movie_pp, _ = preprocess(movie_raw, correct_drift_flag=False)
+        del movie_raw
+    except Exception as exc:
+        print(f"   Loading failed: {exc}")
+        return dict(
+            D_gem_tiles=np.array([]), D_slow_tiles=np.array([]),
+            tile_centers=[], tile_size=tile_size, n_valid=0,
+            median_D=np.nan, mean_D=np.nan, std_D=np.nan,
+        )
+
+    T, Y, X = movie_pp.shape
+    print(f"      raw shape: {T}×{Y}×{X}")
+
+    min_dim = tile_size // 4
+    y_starts = list(range(0, Y, tile_size))
+    x_starts = list(range(0, X, tile_size))
+
+    D_gem_tiles  = []
+    D_slow_tiles = []
+    tile_centers = []
+    converged_flags = []
+
+    print(f"[2/3] Running per-tile DDM ({len(y_starts)}×{len(x_starts)} grid) …")
+    t0 = time.time()
+
+    for y0 in y_starts:
+        for x0 in x_starts:
+            y1 = min(y0 + tile_size, Y)
+            x1 = min(x0 + tile_size, X)
+            if (y1 - y0) < min_dim or (x1 - x0) < min_dim:
+                continue
+            yc, xc = (y0 + y1) // 2, (x0 + x1) // 2
+
+            try:
+                tile = movie_pp[:, y0:y1, x0:x1]
+                # Crop tile to power-of-2 square for the FFT
+                tile_c = _fft_crop(tile)
+                if min(tile_c.shape[1:]) < 16:
+                    raise ValueError(f"tile too small after fft_crop: {tile_c.shape}")
+
+                S_mat, q_centers, taus = compute_ddm_structure_function(
+                    tile_c, max_lag=max_lag, pixel_um=pixel_um, dt=dt,
+                    n_q_bins=N_Q_BINS, use_gpu=use_gpu,
+                )
+                fit2 = fit_ddm_two_component(
+                    S_mat, q_centers, taus,
+                    q_min_fit=6.0, q_max_fit=14.0,
+                    lag_min=3, lag_max=max_lag,
+                    D1_init=0.044, D2_init=0.005,
+                    D1_bounds=(0.01, 0.18), D2_bounds=(0.0005, 0.025),
+                )
+                if fit2.get("converged", False):
+                    D_gem_tiles.append(fit2["D_GEM"])
+                    D_slow_tiles.append(fit2["D_slow"])
+                    converged_flags.append(True)
+                else:
+                    D_gem_tiles.append(np.nan)
+                    D_slow_tiles.append(np.nan)
+                    converged_flags.append(False)
+            except Exception as exc:
+                print(f"   tile ({y0},{x0}) failed: {exc}")
+                D_gem_tiles.append(np.nan)
+                D_slow_tiles.append(np.nan)
+                converged_flags.append(False)
+
+            tile_centers.append((yc, xc))
+
+    D_gem_tiles  = np.asarray(D_gem_tiles, dtype=float)
+    D_slow_tiles = np.asarray(D_slow_tiles, dtype=float)
+    n_valid = int(np.sum(np.isfinite(D_gem_tiles)))
+
+    median_D = float(np.nanmedian(D_gem_tiles)) if n_valid else np.nan
+    mean_D   = float(np.nanmean(D_gem_tiles))   if n_valid else np.nan
+    std_D    = float(np.nanstd(D_gem_tiles))    if n_valid else np.nan
+
+    print(f"      done in {time.time()-t0:.1f}s  ({n_valid}/{len(D_gem_tiles)} converged)")
+    print("\n   Per-tile D_GEM summary:")
+    print(f"   {'tile_center (y,x)':>18}  {'D_GEM':>10}  {'D_slow':>10}")
+    for (yc, xc), d1, d2 in zip(tile_centers, D_gem_tiles, D_slow_tiles):
+        d1s = f"{d1:.5f}" if np.isfinite(d1) else "    nan"
+        d2s = f"{d2:.5f}" if np.isfinite(d2) else "    nan"
+        print(f"   ({yc:>4},{xc:>4}){'':>5}  {d1s:>10}  {d2s:>10}")
+    print(f"\n   median={median_D:.5f}  mean={mean_D:.5f}  std={std_D:.5f}  n_valid={n_valid}")
+
+    # ── CSV ──────────────────────────────────────────────────────────────────
+    csv_path = out / "ddm_tiled_D.csv"
+    try:
+        with open(csv_path, "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["tile_y_center", "tile_x_center", "tile_size",
+                        "D_GEM", "D_slow", "converged"])
+            for (yc, xc), d1, d2, ok in zip(tile_centers, D_gem_tiles,
+                                            D_slow_tiles, converged_flags):
+                w.writerow([yc, xc, tile_size, d1, d2, int(bool(ok))])
+        print(f"   CSV → {csv_path}")
+    except Exception as exc:
+        print(f"   CSV write failed: {exc}")
+
+    # ── Histogram ────────────────────────────────────────────────────────────
+    print("[3/3] Saving D-distribution histogram …")
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        D_plot = D_gem_tiles[np.isfinite(D_gem_tiles) & (D_gem_tiles > 0)]
+        if len(D_plot):
+            bins = np.logspace(np.log10(0.001), np.log10(1.0), 30)
+            ax.hist(D_plot, bins=bins, color="steelblue", edgecolor="black",
+                    alpha=0.75, label=f"DDM tiles (n={len(D_plot)})")
+        ax.axvline(median_D, color="blue", ls="--", lw=1.5,
+                   label=f"median = {median_D:.4f}")
+        if tracking_D is not None:
+            ax.axvline(tracking_D, color="red", ls=":", lw=1.5,
+                       label=f"tracking D = {tracking_D:.4f}")
+        ax.set_xscale("log")
+        ax.set_xlim(0.001, 1.0)
+        ax.set_xlabel("D_GEM per tile (µm²/s)")
+        ax.set_ylabel("Tile count")
+        ax.set_title(f"Tiled DDM D distribution — {name}  "
+                     f"(tile {tile_size}×{tile_size}, n_valid={n_valid})")
+        ax.legend(fontsize=8)
+        fig.tight_layout()
+        hist_path = out / "ddm_tiled_distribution.png"
+        fig.savefig(str(hist_path), dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"   histogram → {hist_path}")
+    except Exception as exc:
+        print(f"   histogram failed: {exc}")
+
+    return dict(
+        D_gem_tiles  = D_gem_tiles,
+        D_slow_tiles = D_slow_tiles,
+        tile_centers = tile_centers,
+        tile_size    = tile_size,
+        n_valid      = n_valid,
+        median_D     = median_D,
+        mean_D       = mean_D,
+        std_D        = std_D,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -781,6 +1008,13 @@ if __name__ == "__main__":
     import sys, time
     inp        = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
     tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
+    use_gpu    = ("--no-gpu" not in sys.argv)
+
+    try:
+        from gpu_utils import gpu_info
+        print(f"[DDM] {gpu_info()}  (use_gpu={use_gpu})")
+    except Exception:
+        pass
 
     tiffs = sorted(list(inp.glob("*.tif")) + list(inp.glob("*.tiff"))) if inp.is_dir() else [inp]
     if not tiffs:
@@ -791,5 +1025,6 @@ if __name__ == "__main__":
         out_dir.mkdir(parents=True, exist_ok=True)
         t0 = time.time()
         fit = analyse_ddm(tiff, tracking_D=tracking_D, out_dir=out_dir,
-                          q_min_fit=Q_MIN_FIT, q_max_fit=Q_MAX_FIT)
+                          q_min_fit=Q_MIN_FIT, q_max_fit=Q_MAX_FIT,
+                          use_gpu=use_gpu)
         print(f"\n   Total: {time.time()-t0:.0f}s   Output → {out_dir}/")

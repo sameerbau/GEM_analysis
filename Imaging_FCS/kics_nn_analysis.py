@@ -53,6 +53,7 @@ def compute_kics_acf(
     pixel_um: float = PIXEL_UM,
     dt: float = DT,
     n_k_bins: int = N_K_BINS,
+    use_gpu: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute isotropic kICS autocorrelation function R(k,τ).
@@ -110,17 +111,47 @@ def compute_kics_acf(
 
     taus  = np.arange(1, max_lag + 1, dtype=np.float64) * dt
     R_mat = np.zeros((max_lag, n_k_bins), dtype=np.float64)
+    max_lag_eff = min(max_lag, T - 1)
+    n_pairs = (T - np.arange(1, max_lag_eff + 1)).astype(np.float64)
 
-    for tau in range(1, max_lag + 1):
-        n = T - tau
-        if n <= 0:
-            break
-        # Numerator: Re[<δF_k*(t)·δF_k(t+τ)>_t]
-        cross = (np.conj(F_all[:n]) * F_all[tau: tau + n]).mean(axis=0)
-        C_re  = np.real(cross)
-        for ik, mask in enumerate(masks):
-            if mask.sum() > 0 and np.isfinite(PS_k[ik]) and PS_k[ik] > 0:
-                R_mat[tau - 1, ik] = C_re[mask].mean() / PS_k[ik]
+    # Optional GPU dispatch (Wiener-Khinchin per k-bin via temporal FFT)
+    try:
+        from gpu_utils import get_xp, to_numpy
+    except Exception:
+        try:
+            from .gpu_utils import get_xp, to_numpy  # type: ignore
+        except Exception:
+            def get_xp(prefer_gpu: bool = True):
+                return np
+            def to_numpy(arr):
+                return np.asarray(arr)
+
+    xp = get_xp(prefer_gpu=use_gpu)
+    n_fft = int(2 * T)
+    try:
+        F_dev = xp.asarray(F_all) if xp is not np else F_all
+    except Exception:
+        xp = np
+        F_dev = F_all
+
+    for ik, mask in enumerate(masks):
+        if mask.sum() == 0 or not np.isfinite(PS_k[ik]) or PS_k[ik] <= 0:
+            continue
+        try:
+            mask_dev = xp.asarray(mask) if xp is not np else mask
+            F_bin = F_dev[:, mask_dev]                      # (T, N_pix)
+            F_t   = xp.fft.fft(F_bin, n=n_fft, axis=0)      # zero-pad to 2T
+            acf   = xp.fft.ifft(xp.abs(F_t) ** 2, axis=0)   # (2T, N_pix)
+            C_re_k_dev = xp.real(acf[1: max_lag_eff + 1]).mean(axis=1)
+            C_re_k = to_numpy(C_re_k_dev)
+            # R(k,τ) = Re[ACF(τ)] / (T−τ) / PS_k
+            R_mat[:max_lag_eff, ik] = (C_re_k / n_pairs) / PS_k[ik]
+        except Exception as exc:  # pragma: no cover
+            warnings.warn(f"kICS bin {ik} failed via xp={xp.__name__}: {exc}")
+            for tau in range(1, max_lag_eff + 1):
+                n = T - tau
+                cross = (np.conj(F_all[:n, mask]) * F_all[tau:tau + n, mask]).mean(axis=0)
+                R_mat[tau - 1, ik] = np.real(cross).mean() / PS_k[ik]
 
     return R_mat, k_centers, taus
 
