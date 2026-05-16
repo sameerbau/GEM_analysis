@@ -1302,8 +1302,8 @@ if __name__ == "__main__":
 
     tiff       = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/Em1_crop.tif")
     tracking_D = float(sys.argv[2]) if len(sys.argv) > 2 else 0.04374
-    out_dir    = Path("/tmp/kics_nn_out")
-    out_dir.mkdir(exist_ok=True)
+    out_dir    = tiff.parent / "kics_nn_out"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     t0 = time.time()
     compare_all_methods(
