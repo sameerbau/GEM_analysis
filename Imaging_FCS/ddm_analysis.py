@@ -756,9 +756,11 @@ def analyse_ddm(
     # Optimal window: q=6-14 rad/µm, lag_min=3 (τ=0.3s).
     # At τ≥0.3s the fast diffuser (D≈0.45, τ_c≤0.06s at q≥6) has fully decayed
     # into B(q).  Two visible components remain:
-    #   D1 ≈ D_GEM  (0.01-0.18)  τ_c=0.06-1.0s in this q range
-    #   D2 ≈ D_slow (0.001-0.025) τ_c >> 3s → slow linear-like rise
-    # Empirically gives D_GEM ≈ 0.044-0.046 µm²/s (1.0-1.05× tracking) on Em1.
+    #   D1 ≈ D_GEM  (0.025-0.18) τ_c=0.06-1.0s in this q range
+    #   D2 ≈ D_slow (0.0005-0.02) τ_c >> 3s → slow linear-like rise
+    # Lower bound for D1 set to 0.025 to prevent the optimizer from converging
+    # onto the slow component (D≈0.010-0.011) which lies just inside a looser
+    # bound of 0.01 and produces a systematically wrong D_GEM.
     fit2 = None
     if two_component:
         q2_min, q2_max, lag2_min = 6.0, 14.0, 3
@@ -769,8 +771,8 @@ def analyse_ddm(
                 S_mat, q_centers, taus,
                 q_min_fit=q2_min, q_max_fit=q2_max,
                 lag_min=lag2_min, lag_max=max_lag,
-                D1_init=0.044, D2_init=0.005,
-                D1_bounds=(0.01, 0.18), D2_bounds=(0.0005, 0.025),
+                D1_init=0.044, D2_init=0.008,
+                D1_bounds=(0.025, 0.18), D2_bounds=(0.0005, 0.020),
             )
             print(f"   D_GEM  = {fit2['D_GEM']:.5f} µm²/s"
                   + (f"   (ratio = {fit2['D_GEM']/tracking_D:.3f}×  "
